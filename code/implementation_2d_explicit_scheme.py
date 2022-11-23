@@ -4,84 +4,108 @@ import matplotlib.animation as animation
 from matplotlib.animation import FuncAnimation
 from tqdm import tqdm
 import matplotlib as mpl
+import scipy.signal
+
 mpl.use("Qt5Agg")
 
-
-'''
-##################
-BEWARE:
-Fosskok fra 
-https://levelup.gitconnected.com/solving-2d-heat-equation-numerically-using-python-3334004aa01a
-#################
-'''
+from RungeKutta import *
 
 print("2D heat equation solver")
 
-plate_length = 50
-max_iter_time = 750
+nz = 50  # nz
+nr = 50  # nr
+nt = 100  # nt
 
-alpha = 2
-delta_x = 1
+length = 1
+radius = 1
 
-delta_t = (delta_x ** 2)/(4 * alpha)
-gamma = (alpha * delta_t) / (delta_x ** 2)
+eta = 4.45e-3
+mu = eta
+
+nu = 1.24e-7
+xi = 4.24e-11
+delta_r = radius/nr
+delta_z = length/nz
+
+delta_t = delta_z**2 / (16*eta)
 
 # Initialize solution: the grid of u(k, i, j)
-u = np.empty((max_iter_time, plate_length, plate_length))
+N = np.empty((nt, nr, nz))
+R = np.zeros((nt, nr, nz))
+NR = np.zeros((nt, nr, nz))
+
 
 # Initial condition everywhere inside the grid
 u_initial = 0
 
-# Boundary conditions
-u_top = 10000.0
-u_left = 0.0
-u_bottom = 0.0
-u_right = 0.0
+u_outer = 0
+u_left = 1
+u_inner = 0
+u_right = 0
 
-# Set the initial condition
-u.fill(u_initial)
+# Set the initial conditions
+N.fill(u_initial)
 
-# Set the boundary conditions
-u[0, (plate_length-1):, :] = u_top
-u[0, :, :1] = u_left
-u[0, :1, 1:] = u_bottom
-u[0, :, (plate_length-1):] = u_right
+N[0, -1, :] = u_outer
+N[0, :, 0] = u_left * np.linspace(0, 3/2, nr)
+N[0, 0, 1:] = u_inner
+N[0, :, -1] = u_right
 
-def calculate(u):
-    for k in tqdm(range(0, max_iter_time-1)):
-        for i in range(1, plate_length-1, delta_x):
-            for j in range(1, plate_length-1, delta_x):
-                u[k + 1, i, j] = gamma * (u[k][i+1][j] + u[k][i-1][j] + u[k][i][j+1] + u[k][i][j-1] - 4*u[k][i][j]) + u[k][i][j]
+R[0, :, -1] = 1 * np.linspace(0, 3/2, nr)
 
-        u[k, 0, :] = u[k, 1, :]
-        u[k, -1, :] = u[k, -2, :]
-        u[k, :, 0] = u[k, :, 1]
-        u[k, :, -1] = u[k, :, -2]
+_k = np.zeros_like(N)
+_k[:, :, -1] = 1.0
+nu = _k * nu
+xi = _k * xi
 
-    return u
 
-def plotheatmap(u_k, k):
+def calculate(N):
+    for k in tqdm(range(0, nt - 1)):
+        R[k+1, :, -1], NR[k+1, :, -1] = RK(N[k, :, -1], R[k, :, -1], NR[k, :, -1], delta_t)
+
+        for i in range(1, nr - 1):
+            for j in range(1, nz - 1):
+                # What a mess :/
+                N[k + 1, i, j] = (1 + nu[k, i, j] * (R[k + 1, i, j] + R[k, i, j]) / 4) ** (-1) * (eta * delta_t * (
+                        (N[k][i + 1][j] - (2 * i * delta_r) * N[k][i][j] + N[k][i - 1][j]) / (i * delta_r ** 3)) + delta_t * ((
+                        N[k][i][j + 1] - 2 * N[k][i][j] + N[k][i][j - 1]) / delta_z ** 2) + (1 - nu[k, i, j] * (
+                            R[k + 1, i, j] + R[k, i, j]) / 4) * N[k][i][j] + xi[k, i, j] * (NR[k + 1, i, j] + NR[k, i,
+                                                                                                                 j]) / 2)
+
+        # Enforce neumann BCs
+        N[k+1, 0, :] = N[k+1, 1, :]
+        N[k+1, -1, :] = N[k+1, -2, :]
+        N[k+1, :, 0] = N[k+1, :, 1]
+        N[k+1, :, -1] = N[k+1, :, -2]
+
+    return N
+
+
+def plotheatmap(N_k, k):
     # Clear the current plot figure
     plt.clf()
 
-    plt.title(f"Temperature at t = {k*delta_t:.3f} unit time")
+    plt.title(f"[N] at t = {k * delta_t:.3f} unit time")
     plt.xlabel("x")
     plt.ylabel("y")
 
     # This is to plot u_k (u at time-step k)
-    plt.pcolormesh(u_k, cmap=plt.cm.jet, vmin=0, vmax=100)
+    plt.pcolormesh(N_k, cmap=plt.cm.jet)
     plt.colorbar()
 
     return plt
 
+
 # Do the calculation here
-u = calculate(u)
+N = calculate(N)
+
 
 def animate(k):
-    plotheatmap(u[k], k)
+    plotheatmap(N[k], k)
 
-anim = animation.FuncAnimation(plt.figure(), animate, interval=1, frames=max_iter_time, repeat=False)
+
+anim = animation.FuncAnimation(plt.figure(), animate, interval=1000, frames=nt, repeat=True)
 plt.show()
-anim.save("heat_equation_solution.gif")
+#anim.save("heat_equation_solution.gif")
 
 print("Done!")

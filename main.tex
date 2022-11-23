@@ -165,7 +165,7 @@ because $[R] = [R-N] = 0$.
 
 
 
-\section{Boundary Conditions}
+\section{Examining the System}
 We deduce some boundary conditions based on the final model in the previous section. Subtracting Equation \eqref{eq:Modelling Eq 2} from Equation \eqref{eq:Modelling Eq 1} yields
 Notice that the system of equations given by \eqref{eq:Modelling Eq 1}, \eqref{eq:Modelling Eq 2} and \eqref{eq:Modelling Eq 3} can be reduced to a system of two equations. Subtracting Equation \eqref{eq:Modelling Eq 2} from Equation \eqref{eq:Modelling Eq 1} yields
 
@@ -393,7 +393,9 @@ as the scaled version of \eqref{eq: Modelling Eq 4 Unscaled}.
 
 
 \section{Perturbation Analysis}
-Given the scaled system of equations, we try to find an analytical approximation to the system using perturbation theory. Beginning with Equation \eqref{eq:Scaled Modelling equation 2}, we set $\partial [R]^* = \xi_0 + \nu \xi_1 + \nu^2 \xi_2 + \mathcal{O}(\nu^3)$ and insert into the equation. Notice that we have defined $\nu := k_{-1}^*$ for ease of notation.  
+Given the scaled system of equations, we are interested in finding an analytical approximation to the system using perturbation theory. As is apparent from the previous section there are several coefficients that
+
+Beginning with Equation \eqref{eq:Scaled Modelling equation 2}, we set $\partial [R]^* = \xi_0 + \nu \xi_1 + \nu^2 \xi_2 + \mathcal{O}(\nu^3)$ and insert into the equation. Notice that we have defined $\nu := k_{-1}^*$ for ease of notation.  
 
 \textcolor{orange}{Fra forelesning i termisk sa han at "Molekylene har etter en tid $t$ diffundert til en avstand proporsjonal med $\sqrt{D t}$ $D$ er diffusjonskoeffisienten"}. \textcolor{blue}{Alex: Beregn dette og se om det stemmer ca med tiden som Ulrik har fått fra 1D!}
 
@@ -537,9 +539,6 @@ This can be seen as an argument for a geometrical reduction of the problem, remo
 
 
 \section{Numerical Approximation in 2D}
-%\subsection{Explicit solution}
-
-\subsection{Implicit Solver}
 In cylindrical coordinates, the first scaled model equation is
 \begin{equation*}
     \frac{\partial [N]}{\partial t} = 
@@ -597,9 +596,7 @@ with elements
     a_{i-1,j} &=  - \eta \frac{\Delta t}{2 i (\Delta r)^2} (i-0.5) \\
     a_{i,j+1} &=  a_{i,j-1} = -\frac{\Delta t }{2 (\Delta z)^2}.\\
 \end{align*}
- 
-We have used $r_i = i \Delta r$. $B^n$ is as mentioned on the same form as $A^n$ \textcolor{orange}{Trenger kanskje ikke skrive opp matrise $B$ også?} 
-\\
+We have used $r_i = i \Delta r$. $B^n$ is as mentioned on the same form as $A^n$ 
 \begin{equation}
 B = 
     \begin{bmatrix}
@@ -638,15 +635,15 @@ The vector $\boldsymbol{C}^n$ is
         [N-R]^{n+1}[n_r \cdot n_z-1]-[N-R]^{n}[n_r \cdot n_z-1] \\
     \end{bmatrix}
 \end{equation}
-All $\boldsymbol{C}^n$, $A^n$ and $B^n$ are time dependent as they depend on the densities of the receptors and the concentration of [N-R]. Thus the procedure of the numerical scheme is as follows 
+All $\boldsymbol{C}^n$, $A^n$ and $B^n$ are time dependent as they depend on the densities of the receptors and [N-R]. Thus the procedure of the numerical scheme is as follows 
 \begin{enumerate}
     \item Given initial values $[N]^0$, $[R]^0$ and $[N-R]^0$, for $n = 0, 1, ..., n_t$
     \begin{enumerate}
         \item Use Runge Kutta to find values for  $\boldsymbol{[R]}^{n+1}$ and $\boldsymbol{[N-R]}^{n+1}$. \begin{equation}
-            [R]^{n+1}_{i,j} = [R]^{n}_{i,j} + \Delta t \left[- \nu \frac{[N]_0}{[R_0]} [N]^{n} [R]^{n} + \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
+            \boldsymbol{[R]}^{n+1}_{i,j} = \boldsymbol{[R]}^{n}_{i,j} + \Delta t \left[- \nu \frac{[N]_0}{[R_0]} \boldsymbol{[N]}^{n} \boldsymbol{[R]}^{n} + \xi \frac{[N]_0}{[R_0]} \boldsymbol{[R-N]}^{n} \right]
         \end{equation} 
         \begin{equation}
-            [N-R]^{n+1}_{i,j} = [N-R]^{n}_{i,j} + \Delta t \left[ \nu \frac{[N]_0}{[R_0]} [N]^{n} [R]^{n} - \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
+            \boldsymbol{[N-R]}^{n+1}_{i,j} = \boldsymbol{[N-R]}^{n}_{i,j} + \Delta t \left[ \nu \frac{[N]_0}{[R_0]} \boldsymbol{[N]}^{n} \boldsymbol{[R]}^{n} - \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
         \end{equation} 
         \item Insert these values into $A^n$, $B^n$ and $\boldsymbol{C}^n$.
         \item Calculate the inverse of $A^n$. 

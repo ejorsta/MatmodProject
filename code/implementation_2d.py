@@ -15,7 +15,7 @@ N[n] is a (nr*nz, 1) vector.
 A and B are (nr*nz, nr*nz). 
 
 So we need a map from an index somewhere between 0 to nr*nz to an index i for 
-r-position and j for z-position. We have chosen the map idx = j + i*nr. 
+r-position and j for z-position. We have chosen the map idx = j + i*nz. 
 '''
 
 '''
@@ -23,19 +23,27 @@ Model coeffiicients and constants
 '''
 
 alpha = 8*10**(-7) # m^2 s^-1, Diffusion coefficient for the neurotransmitters
+eta = 4.45*10**(-3)
+nu = 1.24*10**(-7) 
+xi = 4.24*10**(-11) 
+
+N0 = 3.65 # mol m^(-3)
+R0 = 1.10*10**(-1) # mol m^(-3)
+
 Rr = 0.22*10**(-6) # m, Radius of the synaptic cleft 
 Z = 15*10**(-9) # m, Length of the synaptic cleft (z-axis)
-T =  alpha / Z**2 # s
+T = Z**2 / alpha  # s
+
 
 nN = 5000  # Number of released neurotransmitters
 denR = 1000e12  # Initial receptor density at the membrane
 
-k_on = 4e6  # Forward reaction constant
-k_off = 5   # Backward reaction ocnstant
+#k_on = 4e6  # Forward reaction constant
+#k_off = 5   # Backward reaction ocnstant
 
-nt = 3
-nr = 5
-nz = 5
+nt = 5
+nr = 3
+nz = 3
 
 dt = T / nt
 dr = Rr / nr
@@ -57,56 +65,12 @@ time n+1, the procedure is as follows:
 Runge Kutta to find R and (N-R) densities
 t = 0, 1, ..., nt-1 
 '''
-def RK1_R(N, R, NR, t, dt):
-    return dt * ( -2*k_on*N[:,t]*R[:,t] + k_off*NR[:,t])
+
+
+def RK(N, R, NR, t, nu, xi, N0, R0):
+    R[:,t+1] = R[:,t] - nu * (N0/R0) * N[:,t]*R[:,t] + xi * (N0/R0) * NR[:,t]
     
-def RK2_R(N, R, NR, t, dt, RK1):
-    return dt * ( -2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] + RK1/2) + k_off*(NR[:,t] + RK1/2) )
-
-def RK3_R(N, R, NR, t, dt, RK2)  :
-    return dt * ( -2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] + RK2/2) + k_off*(NR[:,t] + RK2/2) )
-
-def RK4_R(N, R, NR, t, dt, RK3):
-    return dt * ( -2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] + RK3/2) + k_off*(NR[:,t] + RK3/2) )
-    
-
-def RK1_RN(N, R, NR, t, dt):
-    return dt * ( 2*k_on*((N[:,t+1] + N[:,t])/2)*R[:,t] - k_off*NR[:,t])
-
-# Disse tre er egentlig helt like
-def RK2_RN(N, R, NR, t, dt, RK1):
-    return dt * ( 2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] - RK1/2) - k_off*(NR[:,t] + RK1/2) )
-
-def RK3_RN(N, R, NR, t, dt, RK2)  :
-    return dt * ( 2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] - RK2/2) - k_off*(NR[:,t] + RK2/2) )
-
-def RK4_RN(N, R, NR, t, dt, RK3):
-    return dt * ( 2*k_on*((N[:,t+1] + N[:,t])/2)*(R[:,t] - RK3/2) - k_off*(NR[:,t] + RK3/2) )
-
-
-def RK(N, R, NR, t, dt):
-    # print("N", N)
-    # print("R", R)
-    # print("NR", NR)
-    
-    RK1 = RK1_R(N, R, NR, t, dt)
-    RK2 = RK2_R(N, R, NR, t, dt, RK1)
-    RK3 = RK3_R(N, R, NR, t, dt, RK2)
-    RK4 = RK4_R(N, R, NR, t, dt, RK3)
-    
-    #print("RK1", RK1)
-    #print("RK2", RK2)
-    #print("RK3", RK3)
-    #print("RK4", RK4)
-    
-    R[:,t+1] = R[:,t] + (1/6)*(RK1 + 2*RK2 + 2*RK3 + RK4)
-    
-    RK1 = RK1_RN(N, R, NR, t, dt)
-    RK2 = RK2_RN(N, R, NR, t, dt, RK1)
-    RK3 = RK3_RN(N, R, NR, t, dt, RK2)
-    RK4 = RK4_RN(N, R, NR, t, dt, RK3)
-    
-    NR[:,t+1] = NR[:,t] + (1/6)*(RK1 + 2*RK2 + 2*RK3 + RK4)
+    NR[:,t+1] = NR[:,t] + nu * (N0/R0) * N[:,t]*R[:,t] - xi * (N0/R0) * NR[:,t]
     return R, NR
 
 
@@ -115,80 +79,54 @@ Functions to create A, B and C with elements according to Crank Nicholson and Ne
 i = 0, 1, ..., nr-1
 j = 0, 1, ..., nz-1
 '''
-def getAandB(nr, nz, dr, dz, dt, alpha, k_on, R, t):
-    #print("nr ", nr)
-    #print("nz ", nz)
-    print("nr*nz = ", nr*nz)
-    A = np.zeros((nr*nz, nr*nz))*np.nan
-    B = np.zeros((nr*nz, nr*nz))*np.nan
 
-    for i in range(nr):
-        for j in range(nz):
-            idx = j + i*nz
-            print("idx = ",idx)
-            # tenker at ri = (i)*dr?
 
-                       
-            ### A t+1 ###   ### B t ###
+def getAandB(nr, nz, dr, dz, dt, R, t, eta, nu):
+    #A = np.zeros((nr*nz, nr*nz))
+    B = np.zeros((nr*nz, nr*nz))
+    il = np.linspace(nz, nr*nr-1, nr*nz-nz)
+    iu = np.linspace(0, nr*nr-nz, nr*nz-nz)
+    
+    dA = 6*np.ones(nr*nz) # np.ones(nr*nz) + eta * dt/(2*dr**2) + dt /(dz**2) - nu*(dt/2)*(R[:,t+1]-R[:,t]) # i,j
+    djA = 7*np.ones(nr*nz-1) # - dt /(2*dz**2) * np.ones(nr*nz-1)   #i, j+-1
+    DiAupper = 8*np.ones(nr*nz-nz) # - eta * (dt/(2*iu*dr**2)) * (iu+0.05)  # i+1,j
+    DiAlower = 8*np.ones(nr*nz-nz) # - eta * (dt/(2*il*dr**2)) * (il-0.05)  # i-1,j
+    
+    A = np.diag(dA, 0) + np.diag(DiAupper, nz) + np.diag(DiAlower, -nz) + np.diag(djA, 1) + np.diag(djA, -1) 
+    #A[0,nz] = 1
+    
+    dB = 1 - eta * dt/ (2*dr**2) - dt /(dz**2)  - nu*(dt/2)*(R[:,t+1]-R[:,t]) # i,j
+    djB = dt /(2*dz**2) * np.ones(nr*nz-1)  #i, j+-1
+    DiBupper = eta * (dt/(2*iu*dr**2)) * (iu+0.05) # i+1,j
+    DiBlower = eta * (dt/(2*il*dr**2)) * (il-0.05) # i-1,j
+    
+    B = B + np.diag(dB) + np.diag(DiBupper, nz) + np.diag(DiBlower, -nz) + np.diag(djB, 1) + np.diag(djB, -1) 
+    #B[0,nz] = 1
             
-            # i,j N(i,j)
-            A[idx,idx] = 1/dt + alpha /(dz**2) + alpha*((i+0.5+i-0.5+2)*dr) / (2*((i+1)*dr)*dr**2) - (k_on/4)*(R[idx,t+1]-R[idx,t])     
-            print("her = ", - (k_on/4)*(R[idx,t+1]-R[idx,t]))
-            
-            
-            
-            # i,j
-            B[idx,idx] = 1/dt - alpha*((i+0.5+i+0.5+2)*dr) / (2*((i+1)*dr)*dr**2)  - alpha /(dz**2) - (k_on/4)*(R[idx,t+1]-R[idx,t])
-           
-            
-            
-            if idx+nz <= nr*nr-1:
-                # i+1,j N(i+1,j)
-                A[idx,idx+nz] = -alpha*((i+0.5)*dr) / (2*((i+1)*dr)*dr**2) 
-            
-                # i+1,j
-                B[idx,idx+nz] = alpha*((i+1.5)*dr) / (2*((i+1)*dr)*dr**2)
-                
-                
-            if idx-nz >= 0:
-                # i-1,j N(i-1,j)
-                A[idx,idx-nz] = alpha*((i-0.5)*dr) / (2*((i+1)*dr)*dr**2)
-             
-                # i-1,j
-                B[idx,idx-nz] = alpha*((i+0.5)*dr) / (2*((i+1)*dr)*dr**2)
-                   
-            
-            if  idx+1 <= nz*nr-1:
-                # i,j+1 N(i,j+1)
-                A[idx, idx+1] = -alpha /(2*dz**2) 
-                
-                # i,j+1
-                B[idx, idx+1] = alpha /(2*dz**2) 
-                
-            if idx-1 >= 0:
-                # i,j-1 N(i,j-1)
-                A[idx, idx-1] =  -alpha /(2*dz**2) 
-                
-                # i,j-1
-                B[idx, idx-1] =  alpha /(2*dz**2) 
+    # Boundary conditions in A
+    for j in range(1,nr*nz-1, nz):
+        # N(i = i, j = 1, t = t) - N(i = i, j = 0, t = t) = 0
+        A[:,j-1] = A[:, j]
 
-            
-            # Neumann boundary conditions in A
-            # N(i = nr, j = nz, t = t) - N(i = R-1, j = z, t = t) = 0
-            if idx == (nz-1):
-                A[idx,idx] = -A[idx,idx-1]
-                
+    for j in range(0, nz):
+        # N(i = i, j = nz, t = t) - N(i = i, j = nz-1, t = t) = 0
+        A[:,j*nz-1] = A[:, j*nz-2] 
+        
+    # Boundary conditions
+    # N(i = nr, j = j, t = t) - N(i = nr-1, j = j, t = t) = 0
+    A[:,(nr*nz-nz):] = A[:,(nz*nr-2*nz):(nr*nz-nz)] 
+    
+    # N(i = 0, j = j, t = t) - N(i = 1, j = j, t = t) = 0
+    A[:,nz:2*nz] = A[:,0:nz] 
 
     
-    # Neumann boundary conditions in A
-    # N(i = nr, j = nz, t = t) - N(i = R-1, j = z, t = t) = 0
-    A[:,(nr*nz-nz):] = -A[:,(nz*nr-2*nz):(nr*nz-nz)]
-            
-    return  A, B
+    return A,B
+
+
 
     
-def getC(k_off, NR,t):
-    return (k_off/2)*(NR[:,t+1]-NR[:,t])
+def getC(xi, NR,t):
+    return xi*(NR[:,t+1]-NR[:,t])
  
    
 '''
@@ -202,39 +140,35 @@ def implementation():
     R = np.zeros((nr*nz, nt))
     NR = np.zeros((nr*nz, nt))
     
+    i = np.linspace(0, nr-1, nr)
+    
     # initial conditions
     # N(t=0, r=i, z=0) = nN/nr
     # R(t=0, r=i, z=Z) = rdens/nr
     for i in range(nr):
-        N[i*nz,0] = nN/nr # z = 0, r = 0, 1, 2, ...
-        R[nr-1+i*nz,0] = denR/nr # z = Z, r = 0, 1, 2, ...
+        N[i*nz,0] = nN # z = 0, r = 0, 1, 2, ...
+        R[nr-1+i*nz,0] = denR * i / nr# z = Z, r = 0, 1, 2, ...
         
 
-    for t in np.linspace(0, nt-2, nt,dtype=(int)):
-        print("N", N)
-        print("R", R)
-        print("NR", NR)
+    for t in np.linspace(0, nt-2, nt-1,dtype=(int)):
         # One step 
         
         # Runge Kutta 
-        R, NR = RK(N, R, NR, t, dt)
+        R, NR = RK(N, R, NR, t, nu, xi, N0, R0)
         
         
         # Create A and B
-        A, B = getAandB(nr, nz, dr, dz, dt, alpha, k_on, R, t)
-        #print("A ", A)
+        A, B = getAandB(nr, nz, dr, dz, dt, R, t, eta, nu)
         
         
         # Create C
-        C = getC(k_off, NR, t)
+        C = getC(xi, NR, t)
         
-        i = 0
-        j = 0
+        i = 1
+        j = 1
         idx = j+i*nz
-        print("A[idx,:] ",A[idx,:])
+        #print("A[idx,:] ",A[idx,:])
         #print("A",A)
-        
-        #print("determinant ", la.det(A))
         
         Ainv = la.inv(A)
         
@@ -256,7 +190,6 @@ t = 0
 for t in range(nt-1):
     # plot N
     Nmatrix = N[:,t].reshape(nr, nz)
-    print("Nmatrix", Nmatrix)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     rside = np.linspace(0, Rr, nr)
@@ -272,7 +205,6 @@ for t in range(nt-1):
     
     # plot R
     Rmatrix = R[:,t].reshape(nr, nz)
-    print("Rmatrix", Rmatrix)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     rside = np.linspace(0, Rr, nr)
@@ -288,7 +220,6 @@ for t in range(nt-1):
     
     # plot NR
     NRmatrix = NR[:,t].reshape(nr, nz)
-    print("NRmatrix", NRmatrix)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     rside = np.linspace(0, Rr, nr)
