@@ -376,7 +376,7 @@ and
 respectively. Outside the domain $\Omega_\epsilon$ we get
 \begin{equation}
     \frac{\partial [N]}{\partial t} = 
-    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2}
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2},
     \label{skalert_sylinder5}
 \end{equation}
 as the scaled version of \eqref{eq: Modelling Eq 4 Unscaled}.
@@ -393,13 +393,15 @@ as the scaled version of \eqref{eq: Modelling Eq 4 Unscaled}.
 
 
 \section{Perturbation Analysis}
-Given the scaled system of equations, we are interested in finding an analytical approximation to the system using perturbation theory. As is apparent from the previous section there are several coefficients that
+Given the scaled system of equations, we are interested in finding an analytical approximation to the system using perturbation theory. As is apparent from the previous section there are several coefficients that could be treated as a "small" parameter. Notice that the qualitative behaviour of Equation \eqref{skalert_sylinder2} changes when $\nu = 0$ and $\nu \rightarrow 0$, indicating that singular perturbation might be good way to approximate an analytical solution to the equation. More specifically, when $\nu = 0$ the nonlinear reaction term disappears. Attempting to solve this equation with singular perturbation, a 0-order approximation to the outer solution can be found by setting $\nu = 0$
 
+\begin{comment}
 Beginning with Equation \eqref{eq:Scaled Modelling equation 2}, we set $\partial [R]^* = \xi_0 + \nu \xi_1 + \nu^2 \xi_2 + \mathcal{O}(\nu^3)$ and insert into the equation. Notice that we have defined $\nu := k_{-1}^*$ for ease of notation.  
 
 \textcolor{orange}{Fra forelesning i termisk sa han at "Molekylene har etter en tid $t$ diffundert til en avstand proporsjonal med $\sqrt{D t}$ $D$ er diffusjonskoeffisienten"}. \textcolor{blue}{Alex: Beregn dette og se om det stemmer ca med tiden som Ulrik har fått fra 1D!}
 
 \textcolor{red}{Tror ikke dette vil fungere pga coupling: prøver singular perturbation nedenfor i stedet. Usikker på om vi bør bruke alpha eller k som "liten" koeffisient. }
+\end{comment}
 
 Let $\nu := k_{-1}^* > 0$ for ease of notation. The problems when $\nu = 0$ and $\nu \rightarrow 0$ are qualitatively different, meaning that singular perturbation might be a good way to approximate an analytical solution to the system. A 0-order approximation to the outer solution can be found by setting $\nu = 0$, giving the system 
 
@@ -643,15 +645,14 @@ All $\boldsymbol{C}^n$, $A^n$ and $B^n$ are time dependent as they depend on the
             \boldsymbol{[R]}^{n+1}_{i,j} = \boldsymbol{[R]}^{n}_{i,j} + \Delta t \left[- \nu \frac{[N]_0}{[R_0]} \boldsymbol{[N]}^{n} \boldsymbol{[R]}^{n} + \xi \frac{[N]_0}{[R_0]} \boldsymbol{[R-N]}^{n} \right]
         \end{equation} 
         \begin{equation}
-            \boldsymbol{[N-R]}^{n+1}_{i,j} = \boldsymbol{[N-R]}^{n}_{i,j} + \Delta t \left[ \nu \frac{[N]_0}{[R_0]} \boldsymbol{[N]}^{n} \boldsymbol{[R]}^{n} - \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
+            \boldsymbol{[N-R]}^{n+1}_{i,j} = \boldsymbol{[N-R]}^{n}_{i,j} + \Delta t \left[ \nu \frac{[N]_0}{[R_0]} \boldsymbol{[N]}^{n} \boldsymbol{[R]}^{n} - \xi \frac{[N]_0}{[R_0]} \boldsymbol{[R-N]}^{n} \right]
         \end{equation} 
         \item Insert these values into $A^n$, $B^n$ and $\boldsymbol{C}^n$.
         \item Calculate the inverse of $A^n$. 
-        \item Find $[N]^{n+1} = (A^n)^{-1} B^n [N]^{n} + (A^n)^{-1}C^n$.  
+        \item Find $[N]^{n+1} = (A^n)^{-1} B^n [N]^{n} + (A^n)^{-1}\boldsymbol{C}^n$.  
     \end{enumerate}
 \end{enumerate}
-Unfortunately we encountered some problems and did not get any good results.
-
+Unfortunately we encountered problems and did not get any good results.
 
 \section{Clearance of Neurotransmitters}
 The clearance of the neurotransmitters can be described using
