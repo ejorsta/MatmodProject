@@ -397,8 +397,9 @@ Given the scaled system of equations, we are interested in finding an analytical
 
 \begin{align*}
     \frac{\partial [N]}{\partial t} &= 
-    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \nu [N] [R] +  \xi [N-R], \\
-    
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} +  \xi [N-R], \\
+    \frac{\partial [R]}{\partial t} &=  \xi \frac{[N]_0}{[R]_0} [R-N], \\
+    \frac{\partial [R-N]}{\partial t} &= - \xi \frac{[N]_0}{[R]_0} [R-N].
 \end{align*}
 
 \begin{comment}
