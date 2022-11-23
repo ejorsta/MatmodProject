@@ -37,8 +37,9 @@
 
 \title{Modelling Synaptic Transmission \\
 \large TMA4195 — Mathematical Modelling \\
-\small \href{https://github.com/ejorsta/MatmodProject}{https://github.com/ejorsta/MatmodProject}}
-\author{Karen Auestad \and Ulrik Danielsen \and Eirik Jorstad \and Alexander J Ohrt}
+%\small \href{https://github.com/ejorsta/MatmodProject}{https://github.com/ejorsta/MatmodProject}
+}
+%\author{Karen Auestad \and Ulrik Danielsen \and Eirik Jorstad \and Alexander J Ohrt}
 \date{November 2022}
 
 \begin{document}
@@ -487,8 +488,8 @@ After finding $[R]_k^{n+1}$ and $[R-N]_{k}^{n+1}$ we find $[N]_{k}^{n+1}$ by dis
                                                      &- k_1 \left( \frac{[N]_{k}^{n+1} + [N]_k^n}{2} \right) \left( \frac{[R]_{k}^{n+1} + [R]_k^n}{2} \right) \\
                                                      &+k_{-1}\left( \frac{[R-N]_{k}^{n+1} + [R-N]_k^n}{2} \right),
 \end{align}
-for $k = 1, \hdots, K - 1$.
-\begin{figure}[b]
+for $k = 1, \hdots, K - 1$. 
+\begin{figure}[h]
         \centering
         \includegraphics[width=0.5\linewidth]{./code/figures/receptors.pdf}
         \caption{Evolution of bound receptors at the membrane using a one dimensional model. 
@@ -496,6 +497,13 @@ for $k = 1, \hdots, K - 1$.
                 Supposing the transmission happens when one half of the receptors are bound, we find the time to be around 50 nanoseconds.
         }
         \label{fig:receptors}
+\end{figure}
+\begin{figure}[h]
+        \centering
+        \includegraphics[width=0.5\linewidth]{./code/figures/neurotransmitters.pdf}
+        \caption{Concentration of neurotransmitters at the endpoint.
+        As the concentration reaches a constant value quickly, the diffusion process is much faster than the binding of receptors.}
+        \label{fig:neurotrans}
 \end{figure}
 Instead of discretizing the Neumann boundary conditions at fictitious grid points, we apply it directly obtaining an unconditionally stable scheme \cite{khaliq}
 \begin{align*}
@@ -542,14 +550,6 @@ We choose the initial conditions as in \eqref{eq:ic}, i.e. $[N]_0^0 = 360, [R]_{
 The evolution of bound receptors is shown in Figure \ref{fig:receptors}.
 Using these initial values makes the diffusion process happen very fast, much faster than the reaction, which can be seen in Figure \ref{fig:neurotrans}.
 This can be seen as an argument for a geometrical reduction of the problem, removing the $z$-axis completely.
-
-\begin{figure}[tb]
-        \centering
-        \includegraphics[width=0.5\linewidth]{./code/figures/neurotransmitters.pdf}
-        \caption{Concentration of neurotransmitters at the endpoint.
-        As the concentration reaches a constant value quickly, the diffusion process is much faster than the binding of receptors.}
-        \label{fig:neurotrans}
-\end{figure}
 
 
 
