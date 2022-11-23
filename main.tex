@@ -393,7 +393,13 @@ as the scaled version of \eqref{eq: Modelling Eq 4 Unscaled}.
 
 
 \section{Perturbation Analysis}
-Given the scaled system of equations, we are interested in finding an analytical approximation to the system using perturbation theory. As is apparent from the previous section there are several coefficients that could be treated as a "small" parameter. Notice that the qualitative behaviour of Equation \eqref{skalert_sylinder2} changes when $\nu = 0$ and $\nu \rightarrow 0$, indicating that singular perturbation might be good way to approximate an analytical solution to the equation. More specifically, when $\nu = 0$ the nonlinear reaction term disappears. Attempting to solve this equation with singular perturbation, a 0-order approximation to the outer solution can be found by setting $\nu = 0$
+Given the scaled system of equations, we are interested in finding an analytical approximation to the system using perturbation theory. As is apparent from the previous section there are several coefficients that could be treated as a "small" parameter. Notice that the qualitative behaviour of Equation \eqref{skalert_sylinder2} changes when $\nu = 0$ and $\nu \rightarrow 0$, indicating that singular perturbation might be good way to approximate an analytical solution to the equation. More specifically, when $\nu = 0$ the nonlinear reaction term disappears. Attempting to solve this equation with singular perturbation, a 0-order approximation to the outer solution can be found by setting $\nu = 0$, giving the system 
+
+\begin{align*}
+    \frac{\partial [N]}{\partial t} &= 
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \nu [N] [R] +  \xi [N-R], \\
+    
+\end{align*}
 
 \begin{comment}
 Beginning with Equation \eqref{eq:Scaled Modelling equation 2}, we set $\partial [R]^* = \xi_0 + \nu \xi_1 + \nu^2 \xi_2 + \mathcal{O}(\nu^3)$ and insert into the equation. Notice that we have defined $\nu := k_{-1}^*$ for ease of notation.  
