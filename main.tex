@@ -1,0 +1,953 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[version=4]{mhchem}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{comment}
+\usepackage{listings}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{biblatex}
+\addbibresource{sources.bib}
+\usepackage{mathtools}
+\mathtoolsset{showonlyrefs}
+
+% +++++++ Greier for å lage brede hatter, sånn at man kan ha hatt over [N] ++++++++
+\usepackage{scalerel,stackengine}
+\stackMath
+\renewcommand\widehat[1]{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}% 
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}
+% ---------------------------------------------------------------------------------
+
+% Kommentere ut mange linjer av ganga
+\newcommand{\commentout}[1]{}
+
+
+
+
+\title{Modelling Synaptic Transmission \\
+\large TMA4195 — Mathematical Modelling}
+\author{Karen Auestad \and Ulrik Danielsen \and Eirik Jorstad \and Alexander J Ohrt}
+\date{November 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}\label{Section:Intro}
+The objective of this project is to model synaptic transmission. The focus lies on what happens in the \textit{synaptic cleft}, the region between two neurons that allows for passing signals between them. This mechanism is essential for our brain function. From the pre-synaptic neuron, also known as the axon terminal, neurotransmitters are released in response to an \textit{action potential}, i.e. an electric signal. After this release, the neurotransmitters move across the synaptic cleft, where they interact with receptors located on the post-synaptic neuron, also known as the dendritic spine. The neurotransmitters essentially bind to free receptors, and, when enough of these molecules are bound, a new signal is produced in the post-synaptic neuron. This signal will then lead to a similar process in the next synapse and so on. 
+
+First we develop a simple mathematical framework for studying this process. After scaling the equations, we attempt to find an approximate solution to the system using perturbation theory. Then we try to solve the equations numerically, given some typical parameter values, in order to study some possible solutions. After this, the mathematical problem may be changed in several different ways, e.g. by changing the assumed geometry of the system, modeling clearance of neurotransmitters from the synaptic cleft or coupling the system with flow. 
+
+
+\section{Modelling the Movement of Neurotransmitters}\label{Section:Diffusion}
+After the release of neurotransmitters at the pre-synaptic neuron, the signalling molecule moves across the synaptic cleft. This movement is most commonly modelled as free diffusion. The flux density of neurotransmitters, $J_N$, can be approximated using Fick's law of diffusion
+
+\begin{equation}
+    J_N = -\alpha_N\nabla c_N,
+    \label{Eq: Ficks Law}
+\end{equation}
+where $c_N$ is the concentration of neurotransmitters and $\alpha_N$ is a diffusion coefficient. Mass conservation in the absence of chemical reactions yields the diffusion equation 
+
+\begin{equation}
+    \frac{\partial c_N}{\partial t} = \alpha_N\nabla^2c_N, 
+\end{equation}
+which describes how diffusion leads to a change in concentration with time. More specifically, the mass conservation equation on differential form reads
+
+\begin{equation*}
+    \frac{\partial c_N}{\partial t} + \nabla J_N = 0,
+\end{equation*}
+with no source or sink, since we assume an absence of chemical reactions when studying diffusion in isolation. Insertion of Fick's law yields 
+
+\begin{equation*}
+    \frac{\partial c_N}{\partial t} - \nabla (\alpha_N\nabla c_N) = 0,
+\end{equation*}
+and assuming $\alpha_N$ is constant the equation simplifies to 
+
+\begin{equation*}
+    \frac{\partial c_N}{\partial t} = \alpha_N \nabla \nabla c_N \implies \frac{\partial c_N}{\partial t} = \alpha_N \nabla^2c_N,
+\end{equation*}
+which is the diffusion equation given above. 
+
+
+\section{Modelling the Binding Process}\label{Section:BindingProcess}
+After the neurotransmitters arrive at the post-synaptic neuron, they eventually bind to free receptors which are fixed at the dendritic spine.
+We assume that the probability of a neurotransmitter binding to a receptor is a function of both the distance between them and the duration of time they are in proximity of each other.
+One natural way to model this behaviour is as a chemical reaction between neurotransmitters $N$ and receptors $R$.
+However, as the receptors do not freely move around in the synaptic cleft $\Omega$, but lie on a lower dimensional manifold $\Gamma$, we introduce a small artificial cleft $\Omega_\epsilon$ such that $\Gamma \subset \Omega_\epsilon \subset \Omega$.
+The receptors are now defined to lie in $\Omega_\epsilon$, where the proportion of free receptors at $x \in \Omega_\epsilon$ and time $t$ is $P_{\Omega_\epsilon}^{R}(t, x) \in (0,1)$.
+The binding process is modelled as a chemical reaction 
+\begin{equation*}
+    \ce{$R$ + $N$ ->[$k$] $R-N$},
+\end{equation*} 
+where $R-N$ is a bound receptor. For simplicity, we assume that this chemical reaction is a net forward reaction. 
+Let $f_N(t, x)$ be the probability density of neurotransmitters at position $x$ at time $t$, and similarly for receptors, $f_R(t, x)$.
+We define $H(T)$ as the probability of a reaction occurring before a time $T$ given that the neurotransmitter and receptor are at the same position, $x_N = x_R$.
+When $x_N \neq  x_R$, the probability of a reaction occurring is weighted as a function of the distance, $g(|x_N - x_R|)$.
+Now the probability density of neurotransmitters at $t + \Delta t$ can be written as the probability density at $t$, times the probability that it has not reacted with any of the receptors in $\Omega_\epsilon$ during $\Delta t$,
+\begin{equation}\label{eq:o_rec}
+        f_N(t + \Delta t, x) = f_N(t, x)\left(1 - \int_{\Omega_\epsilon}^{}g(|x - x_R|) H(\Delta t)f_R(t, x_R)dx_R\right).
+\end{equation}
+Notice that $f_R(t, x_R) = P_{\Omega_\epsilon}^{R}(t,x_R)$.
+As $\epsilon \rightarrow 0$ the amount of reactors stays constant, and the proportion of reactors in $\Omega_\epsilon$ becomes a proportion on $\Gamma$, $P_\Gamma^R(t,x)$.
+Taking the limit $\epsilon \rightarrow 0$, Equation \eqref{eq:o_rec} can be written as 
+\begin{equation*}
+        f_N(t + \Delta t, x) - f_N(t, x) = -f_N(t,x)\int_{\Gamma}^{} g(|x - x_R|)H(\Delta t)P_\Gamma^R(t, x_R) dx_R.
+\end{equation*}
+As $H(0) = 0$, we can divide by $\Delta t$ and take the limit $\Delta t \rightarrow 0$, giving 
+\begin{equation*}
+        \frac{\partial}{\partial t}f_N(t, x) = -f_N(t,x)\int_{\Gamma}^{} g(|x - x_R|)H'(0)P_\Gamma^R(t, x_R) dx_R.
+\end{equation*}
+Finally we assume $g(|x|) = \delta (x)$. Then the equation becomes 
+\begin{equation*}
+       \frac{\partial}{\partial t}f_N(t, x) = -H'(0)f_N(t,x)P_\Gamma^R (t, x).
+\end{equation*}
+Let $[R]$ be a pseudo-concentration of receptors in $\Gamma$ proportional to $P_\Gamma^R(t,x)$.
+Since the density of neurotransmitters is proportional to the concentration of the same substance, we reach the standard rate equation
+\begin{equation*}
+\frac{\partial [N]}{\partial t} = - k [N][R],
+\end{equation*}
+where $[N]$ denotes the concentration of neurotransmitters. 
+
+\begin{comment}
+\textcolor{red}{Syns dette ser veldig bra ut! Har et spm, e det sånn her man får overgangen til \eqref{eq:o_rec}; 
+\begin{align*}
+   f_{A}(t+\Delta t, x) &= f_{A}(t+\Delta t, x | t, x) \cdot f_{A}(t,x) \quad \text{ betinget sannsynlighet} \\
+   &= P[\text{Reaction has not yet occurred after $\Delta t$ time (A is still there )}] \cdot f_{A}(t,x) \\
+   &= \left(1 - P[\text{Reaction has occurred}] \right) \cdot f_{A}(t,x) \\
+   &= \left(1 - \int_{\Omega} g(|x_{A} - x_{B}| H(\Delta t) f_{B}(t,x_{B})) dx_{B} \right) \cdot f_{A}(t,x) \\
+\end{align*}
+? 
+} Jupp
+tyty
+\end{comment}
+
+\section{Final Model}
+Our final (simple) mathematical model for synaptic neurotransmission, i.e. the sequence that covers the motion and activity of the neurotransmitters and receptors in the intercellular space, is found by composing the results from Sections \ref{Section:Diffusion} and \ref{Section:BindingProcess}. Notice that we assumed a net forward reaction in Section \ref{Section:BindingProcess}. More realistically, in the following we assume a chemical equilibrium of the form 
+
+\begin{equation}
+    \ce{$R$ + $N$ <=>[$k_1$][$k_{-1}$] $R-N$},
+\end{equation}
+where $R-N$ denotes a bound receptor. There is in fact some probability that a bound receptor releases a neurotransmitter, and, vice versa, a probability that a neurotransmitter binds to the receptor, which is why this process is modelled by a reversible chemical reaction. 
+
+Conservation of mass of neurotransmitters gives the equation 
+
+\begin{equation}\label{eq:Modelling Eq 1}
+    \frac{\partial [N]}{\partial t} = \alpha_N\nabla^2[N]- k_1[N][R] + k_{-1}[R-N],
+\end{equation}
+where $-k_{1}[N][R]$ is a sink, $k_{-1}[N-R]$ is a source and $\alpha_N\nabla^2[N]$ is the gradient of the flux of $[N]$. Similarly, conservation of mass of receptors gives the equation 
+
+\begin{equation}\label{eq:Modelling Eq 2}
+    \frac{\partial [R]}{\partial t} = - k_1[N][R] + k_{-1}[R-N], 
+\end{equation}
+where $-k_{1}[N][R]$ is a sink and $k_{-1}[N-R]$ is a source. The receptors do not diffuse, which explains the absence of a diffusion term in this equation. Finally, conservation of mass of bound receptors gives the equation 
+
+\begin{equation}\label{eq:Modelling Eq 3}
+    \frac{\partial [R-N]}{\partial t} = k_1[N][R] - k_{-1}[R-N],
+\end{equation}
+where $-k_{-1}[N-R]$ is a sink and $k_{1}[N][R]$ a source. Thus, the final (simple) modelling equations we will study inside the artificial region $\Omega_\epsilon$ are Equations \eqref{eq:Modelling Eq 1}, \eqref{eq:Modelling Eq 2} and \eqref{eq:Modelling Eq 3}. Outside this region, in $\Omega \setminus \Omega_\epsilon$, i.e. in the region between the pre-synaptic neuron and the artificial region outside the post-synaptic neuron, there are no receptors. This means that we will simply study a special case of Equation \eqref{eq:Modelling Eq 1} in this region, given by 
+
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = \alpha_N\nabla^2[N],
+    \label{Eq: Outside Syn. Cleft.}
+\end{equation}
+because $[R] = [R-N] = 0$.
+
+
+
+\section{Boundary Conditions}
+We deduce some boundary conditions based on the final model in the previous section. Subtracting Equation \eqref{eq:Modelling Eq 2} from Equation \eqref{eq:Modelling Eq 1} yields
+Notice that the system of equations given by \eqref{eq:Modelling Eq 1}, \eqref{eq:Modelling Eq 2} and \eqref{eq:Modelling Eq 3} can be reduced to a system of two equations. Subtracting Equation \eqref{eq:Modelling Eq 2} from Equation \eqref{eq:Modelling Eq 1} yields
+
+\begin{equation}\label{eqn:addition1}
+    \frac{\partial [N]}{\partial t}-\frac{\partial [R]}{\partial t} = \alpha_N\nabla^2[N].
+\end{equation}
+Moreover, adding Equation \eqref{eq:Modelling Eq 3} and Equation \eqref{eq:Modelling Eq 1} yields
+
+\begin{equation}\label{eqn:addition2}
+    \frac{\partial [N]}{\partial t}-\frac{\partial [R-N]}{\partial t} = \alpha_N\nabla^2[N].
+\end{equation}
+Finally, adding Equation \eqref{eq:Modelling Eq 3} and Equation \eqref{eq:Modelling Eq 2} yields 
+
+\begin{equation}\label{123}
+    \frac{\partial [R]}{\partial t}+\frac{\partial [R-N]}{\partial t} = 0 \implies [R] + [R-N] = C(x),  
+\end{equation}
+where $C(x)$ is a constant function that does not depend on time. Inserting the expression into Equation \eqref{eq:Modelling Eq 1} yields 
+
+\begin{align}
+    \frac{\partial [N]}{\partial t} &= \alpha_N\nabla^2[N]- k_1[N][R] + k_{-1}(-[R]+C(x)))\nonumber\\
+    &\qquad \qquad \qquad \qquad \Updownarrow \nonumber\\
+    \frac{\partial [N]}{\partial t} &= \alpha_N\nabla^2[N]- k_1[N][R] - k_{-1}[R] + k_{-1}C(x) \label{eq:Modelling eq 4},
+\end{align}
+which is coupled to Equation \eqref{eq:Modelling Eq 2} via 
+
+\begin{align}
+    \frac{\partial [R]}{\partial t} &= - k_1[N][R] + k_{-1}(-[R]+C(x)))\nonumber\\
+    &\qquad \qquad \qquad \Updownarrow \nonumber\\
+    \frac{\partial [R]}{\partial t} &= - k_1[N][R] - k_{-1}[R] + k_{-1}C(x) \label{eq:Modelling eq 5},
+\end{align}
+Thus, alternatively, one could solve the coupled system of equations given by Equations \eqref{eq:Modelling eq 4} and \eqref{eq:Modelling eq 5}, because the relation between the concentration of free and bounded receptors is given by Equation \eqref{123}. The exact form of function $C(x)$ can be defined as a boundary condition. 
+
+\begin{comment}
+\textcolor{red}{Dette gir absolutt ingen ny informasjon lol}
+We know that transmission is triggered in the post-synaptic neuron when the fraction of bound receptors is above 0.5. In addition, we are given that the density of receptors on the membrane is constant $\rho_R = \SI{1000}{\micro\,\meter^{-2}}$. Using this knowledge, we can estimate the value of $t$, which estimates the time for transmission of a signal in the synapse, based on Equation \eqref{eqn:estimateTime}, after defining a geometry for the synapse. \textcolor{red}{Dette virker litt merkelig i ettertid. Må vel legge til en tid det tar å diffundere over også kanskje.}
+
+For example, define the synaptic region as a cylinder, and assume that the distribution of the receptors on the membrane is uniform. Using the given radius of the synaptic cleft of $r_{\text{cleft}} = \SI{0.22}{\micro\,\meter}$density $\rho_R$, this means that there are $n_R = 1000\cdot10^{-6}\cdot \pi(0.22\cdot 10^{-6})^2 = 1.520531e-16$ receptors on the membrane \textcolor{red}{Dette hørtes rart ut, surrer nok litt her nå}.
+
+\textcolor{blue}{Ulrik: Må boundary conditions utledes fra ligningene?}
+\textcolor{red}{Tror ikke man må det, men tenkte at det var noen "selvsagte" conditions som følger fra ligningene. Bør man ikke bruke dem da for at ligningene skal gjelde?}
+\textcolor{blue}{Vi kan sikkert tolke ligningene, men \eqref{123} tror jeg blir feil.
+Det betyr vel heller kun at mengden reseptorer er konstant.}
+\end{comment}
+
+\section{Geometry}\label{Section: Geometry}
+For the remainder of this report, we will assume a cylindrical shape of the synaptic cleft. In addition, we will assume a rotationally symmetric distribution of the neurotransmitters when they are released on the axon terminal, and a rotationally symmetric distribution of the receptors on the dendritic spine. These assumptions motivate the use of cylindrical coordinates for describing the problem, which gives the modelling equations
+\begin{align*}
+\begin{split}
+\frac{\partial [N]}{\partial t} &= \frac{\alpha_N}{r} \frac{\partial}{\partial r} \left(r \frac{\partial [N]}{\partial r} \right) + \frac{\alpha_N}{r^2} \frac{\partial^2 [N]}{\partial \theta^2} + \alpha_N \frac{\partial^2 [N]}{\partial (z)^2} - k_{1}[N] [R] + k_{-1}[R-N]\\
+\frac{\partial [R]}{\partial t} &= - k_1[N][R] + k_{-1}[R-N]\\
+\frac{\partial [R-N]}{\partial t} &= k_{-1}[N][R] - k_{-1}[R-N].
+\end{split}
+\end{align*}
+However, since we assumed a rotationally symmetric initial state of the system, $[N]$ must be constant in $\theta$ everywhere. This means that the term involving the gradient with respect to $\theta$ is $0$, and the system reduces to
+\begin{align*}
+\frac{\partial [N]}{\partial t} &= \frac{\alpha_N}{r} \frac{\partial}{\partial r} \left(r \frac{\partial [N]}{\partial r} \right) + \alpha_N \frac{\partial^2 [N]}{\partial (z)^2} - k_{1}[N] [R] + k_{-1}[R-N]\\
+\frac{\partial [R]}{\partial t} &= - k_1[N][R] + k_{-1}[R-N]\\
+\frac{\partial [R-N]}{\partial t} &= k_{-1}[N][R] - k_{-1}[R-N].
+\end{align*}
+Similarly, outside the region $\Omega_\epsilon$, \eqref{Eq: Outside Syn. Cleft.} becomes \begin{equation*}
+    \frac{\partial [N]}{\partial t} = \frac{\alpha_N}{r} \frac{\partial}{\partial r} \left(r \frac{\partial [N]}{\partial r} \right) + \alpha_N \frac{\partial^2 [N]}{\partial (z)^2}.
+\end{equation*}
+
+
+
+\section{Scaling}
+Before moving on, the modelling equations should be scaled. In the following, we let a superscript $A^*$ denote the physical quantity $A$. Consider the unscaled system
+\begin{align}
+    \frac{\partial [N]^*}{\partial t^*} &= \frac{\alpha_N^*}{r^*} \frac{\partial}{\partial r^*} \left(r^* \frac{\partial [N]^*}{\partial r^*} \right) + \alpha_N^* \frac{\partial^2 [N]^*}{(\partial z^*)^2} - k_{1}^*[N]^* [R]^* + k_{-1}^*[R-N]^*, \label{eq: Modelling Eq 1 Unscaled}\\
+    \frac{\partial [R]^*}{\partial t^*} &= - k_1^*[N]^*[R]^* + k_{-1}^*[R-N]^*, \label{eq: Modelling Eq 2 Unscaled}\\
+    \frac{\partial [R-N]^*}{\partial t^*} &= k_{-1}^*[N]^*[R]^* - k_{-1}^*[R-N]^*.\label{eq: Modelling Eq 3 Unscaled}\\
+    \frac{\partial [N]^*}{\partial t^*} &= \frac{\alpha_N^*}{r^*} \frac{\partial}{\partial r^*} \left(r^* \frac{\partial [N]^*}{\partial r^*} \right) + \alpha_N^* \frac{\partial^2 [N]^*}{(\partial z^*)^2}\label{eq: Modelling Eq 4 Unscaled}
+\end{align}
+The most important physical constants in this problem are summarized in Table \ref{tab:Constants}.
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{c|c|c}
+        Description & Variable & Value\\
+        \hline
+        Length of synaptic cleft & L & $\SI{15d-9}{\meter}$\\
+        Radius of synaptic cleft & R & $\SI{0.22d-6}{\meter}$\\
+        Diffusion coefficient & $\alpha_N^*$ & $\SI{8d-7}{\square\meter\per\second}$\\
+        Density of receptors on dendritic membrane & $\rho_R$ & $\SI{1d15}{\per\square\meter}$\\
+        Density of neurotransmitters on axon membrane & $\rho_N$ & $\SI{33d15}{\per\square\meter}$\\
+        Forward reaction constant & $k_1^*$ & \SI{4d3}{\cubic\meter\per\mol\per\second}\\
+        Backward reaction constant & $k_{-1}^*$ & \SI{5}{\per\second}
+    \end{tabular}
+    \caption{The most important physical constants in the problem.}
+    \label{tab:Constants}
+\end{table}
+
+\begin{comment}
+Note that concentration is only a meaningful concept on a macroscopic scale, where it is fair to assume that the concentration is continuous. On a molecular scale, the particles are discrete and a moving average has to be introduced to make concentration a meaningful concept. \textcolor{red}{Her brukes sylinderkoordinater uten at koordinatsystemet er introdusert. Introdusere først eller droppe dette?} \textcolor{violet}{Stemmer for å introdusere det først, for vi kommer vel aldri til å bruke noe annet koordinatsystem enn syllinderkoordinater? Var noen kommentarer på at det burde introduseres litt lenger opp før hvertfall} \textcolor{red}{Enig!}In the $r$ and $\theta$ directions, this is less of a problem, as we are dealing with a density of particles in these directions, and so the moving average has already been applied. However in the $z$-direction, it makes sense to introduce a \textit{moving average characteristic size} $\Delta z_{ma}$. We will set $\Delta z_{ma} = L/1000$, giving a \textit{resolution} of $1000$ different concentrations in the $z$-direction. Using this, we get
+\begin{align}\label{eq:ic}
+\begin{split}
+    [R]_0 &= \frac{\rho_R}{\Delta z_{ma}} = \SI{6.66d25}{\per\cubic\meter} \approx \SI{111}{\mol\per\cubic\meter},\\
+    [N]_0 &= \frac{\rho_N}{\Delta z_{ma}} = \SI{2.2d27}{\per\cubic\meter} \approx \SI{3.6d3}{\mol\per\cubic\meter},
+\end{split}
+\end{align}
+as the initial concentrations on the two boundaries. 
+
+
+We can then define the scaled variables
+
+\begin{align}
+\begin{split}
+    [N] &= \frac{[N]^*}{[N]_0},\\
+    [R] &= \frac{[R]^*}{[R]_0},\\
+    [R-N] &= \frac{[R-N]^*}{[R]_0},\\
+    z &= \frac{z^*}{L}.
+\end{split}
+\end{align}
+To find a scale for time, we insert the scales above into Equation \eqref{eq: Modelling Eq 1 Unscaled}
+\begin{align}
+\begin{split}
+    &[N]_0 \frac{\partial [N]}{\partial t} = \frac{[N]_0 \alpha_N^*}{L^2}\nabla^2[N]- [N]_0 [R]_0 k_1^*[N][R] + [R]_0 k_{-1}^*[R-N] \label{12345}\\
+    \implies&\frac{1}{[R]_0 k_1^*} \frac{\partial [N]}{\partial t} = \frac{\alpha_N^*}{L^2 [R]_0 k_1^*} \nabla^2[N] - [N][R] + \frac{k_{-1}^*}{[N]_0 k_1^*}[R-N].
+\end{split}
+\end{align}
+From this, we see that a reasonable time-scale is
+\begin{equation}
+    t = t^* [R]_0 k_1.
+\end{equation}
+Under this scaling, the scaled system of equations becomes
+\begin{align}
+    \frac{\partial [N]}{\partial t} &= \alpha_N\nabla^2[N]- [N][R] + k_{-1}[R-N],\\
+    \frac{\partial [R]}{\partial t} &= - [N][R] + k_{-1}[R-N] \label{eq:Scaled Modelling equation 2},\\
+    \frac{\partial [R-N]}{\partial t} &= [N][R] - k_{-1}[R-N],
+\end{align}
+where $\alpha_N = \frac{\alpha_N^*}{L^2[R]_0 k_1^*} \approx \SI{8d3}{}$ and $k_{-1} = \frac{k_{-1}^*}{[N]_0 k_1^*} \approx \SI{3.5d-7}{}$.
+\end{comment}
+
+\subsection{Scaling in Cylindrical Coordinates}
+In our problem, we assume that the synaptic cleft is cylindrical. Hence, the equations are also scaled after introducing cylindrical coordinates. Introduce the scales
+
+\begin{alignat*}{4}
+    t^* &= t \cdot t_0 \\
+    z^* &= z \cdot z_0, \quad\quad & &z_0 & &= L &&= \SI{1.5d-8}{\meter}, \\
+    r^* &= r \cdot r_0, \quad\quad & &r_0 & &= R  &&= \SI{2.2d-7}{\meter},\\
+    [N]^* &= [N]\cdot [N]_0, \quad\quad & &[N]_0 & &= \rho_N / L  &&= \SI{3.65}{\mol\per\cubic\meter},\\
+    [R]^* &= [R]\cdot [R]_0  \quad\quad & &[R]_0 & &= \rho_R / L &&= \SI{1.10d-1}{\mol\per\cubic\meter},\\
+    [N-R]^* &= [N-R]\cdot [N-R]_0 \quad\quad & & [N-R]_0 & &= [R]_0,
+\end{alignat*}
+which will make $t$, $z$, $r$, $[N]$, $[R]$ and $[N-R]$ dimensionless, and in the range $(0,1)$.
+We have
+\begin{alignat*}{2}
+ [N]^* &= [N]^*(r^*, z^*, t^*) &&= [N]_0 [N]\left(\frac{r^*}{r_0}, \frac{z^*}{z_0}, \frac{t^*}{t_0}\right), \\
+ [R]^* &= [R]^*(r^*, z^*, t^*) &&= [R]_0 [R]\left(\frac{r^*}{r_0}, \frac{z^*}{z_0}, \frac{t^*}{t_0}\right), \\
+ [N-R]^* &= [N-R]^*(r^*, z^*, t^*) &&= [N-R]_0[N-R]\left(\frac{r^*}{r_0}, \frac{z^*}{z_0} \frac{t^*}{t_0}\right). \\
+\end{alignat*}
+
+We scale Equation \eqref{eq:cylindricalModeq1} one term at a time. The calculations are
+\begin{align}
+    \frac{\partial [N]^*}{\partial t^*} &= [N]_0 \frac{\partial [N]}{\partial t} \frac{1}{ t_0} = \frac{[N]_0}{ t_0} \frac{\partial [N]}{\partial t}, \label{eq:LHSScaledCyl}\\
+    \frac{\partial [N]^*}{\partial r^*} &= [N]_0 \frac{\partial [N]}{\partial r} \frac{1}{r_0} = \frac{[N]_0}{r_0} \frac{\partial [N]}{\partial r}, \nonumber \\
+    %r^* &= r_0 \cdot r \\
+    r^* \frac{\partial [N]^*}{\partial r^*} &= r_0 \cdot r \frac{[N]_0}{r_0} \frac{\partial [N]}{\partial r} = [N]_0 r \frac{\partial [N]}{\partial r}, \nonumber\\
+    \frac{\alpha_N^*}{r^*} \frac{\partial}{\partial r^*} \left( r^* \frac{\partial [N]^*}{\partial r^*} \right) &= \frac{\alpha_N^*}{r_0^2 \cdot r} \frac{\partial}{\partial r} \left( [N]_0 r \frac{\partial [N]}{\partial r} \right) = \frac{\alpha_N^* [N]_0}{r_0^2 \cdot r} \left(\frac{\partial [N]}{\partial r} +  r \frac{\partial^2 [N]}{\partial r^2} \right),\label{eq:RHSScaledCyl1}\\
+    \alpha_N^* \frac{\partial^2 [N]^*}{\partial (z^*)^2}  &= \alpha_N^* [N]_0 \frac{\partial^2 [N]}{\partial z^2} \frac{1}{z_0^2} =  \frac{\alpha_N^* [N]_0}{z_0^2}  \frac{\partial^2 [N]}{\partial z^2}, \label{eq:RHSScaledCyl2} \\
+    -k_1^* [N]^* [R]^* &= - [N]_0 [R]_0 k_1^* [N] [R],\label{eq:RHSScaledCyl3} \\
+    k_{-1}^* [N-R]^* &= [N-R]_0 k_{-1}^* [N-R]. \label{eq:RHSScaledCyl4}
+\end{align}
+Insertion of the scaled left hand side (Equation \eqref{eq:LHSScaledCyl}), as well as the scaled right hand side (Equations \eqref{eq:RHSScaledCyl1},\eqref{eq:RHSScaledCyl2},\eqref{eq:RHSScaledCyl3} and \eqref{eq:RHSScaledCyl4}) into Equation \eqref{eq: Modelling Eq 1 Unscaled} yields
+\begin{align}
+    %\frac{\partial [N]^*}{\partial t^*} &= \frac{\alpha}{r^*} \frac{\partial}{\partial r^*} \left(r^* \frac{\partial [N]^*}{\partial r^*} \right) + \alpha \frac{\partial^2 [N]}{\partial z^2} - k_{1}[N] [R] + k_{-1}[R-N] \\
+    \frac{[N]_0}{ t_0} \frac{\partial [N]}{\partial t} &= 
+    \frac{\alpha_N^* [N]_0}{r_0^2 \cdot r} \left(\frac{\partial [N]}{\partial r} + r  \frac{\partial^2 [N]}{\partial r^2} \right) +  \frac{\alpha_N^* [N]_0}{z_0^2}  \frac{\partial^2 [N]}{\partial z^2} - [N]_0 [R]_0 k_1^* [N] [R] + [N-R]_0 k_{-1}^* [N-R] \nonumber\\
+    %\Leftrightarrow  \frac{\partial [N]}{\partial t} &= 
+    %\frac{ t_0}{[N]_0} \frac{\alpha_N^* [N]_0}{r_0^2 \cdot r} \left(\frac{\partial [N]}{\partial r} + \frac{r}{r_0}  \frac{\partial^2 [N]}{\partial r^2} \right) +  \frac{ t_0}{[N]_0} \frac{\alpha_N^* [N]_0}{z_0^2}  \frac{\partial^2 [N]}{\partial z^2} - \frac{ t_0}{[N]_0} [N]_0 [R]_0 k_1^* [N] [R] + \frac{ t_0}{[N]_0} [N-R]_0 k_{-1}^* [N-R]\\
+    \Leftrightarrow  \frac{\partial [N]}{\partial t} &= 
+    \frac{\alpha_N^* t_0}{r_0^2} \frac{1}{r} \left(\frac{\partial [N]}{\partial r} + r \frac{\partial^2 [N]}{\partial r^2} \right) + \frac{\alpha_N^* t_0}{z_0^2}  \frac{\partial^2 [N]}{\partial z^2} - [R]_0 t_0  k_1^* [N] [R] + \frac{ [N-R]_0 t_0}{[N]_0}  k_{-1}^* [N-R]\nonumber\\
+    &= 
+    \frac{\alpha_N^* t_0}{r_0^2} \frac{1}{r} \frac{\partial [N]}{\partial r} + \frac{\alpha_N^* t_0}{r_0^2}  \frac{\partial^2 [N]}{\partial r^2}  + \frac{\alpha_N^* t_0}{z_0^2}  \frac{\partial^2 [N]}{\partial z^2} - [R]_0 t_0  k_1^* [N] [R] + \frac{ [N-R]_0 t_0}{[N]_0}  k_{-1}^* [N-R].\label{skalert_sylinder}
+\end{align}
+Notice that balancing Equation \eqref{skalert_sylinder} yields several possible scales for $t$. Among these possibilities, we choose to use the scale 
+\begin{equation}
+    t_0 = \frac{z_0^2}{\alpha_N^*}, \quad  [t_0] = \frac{\text{m}^2}{\text{m}^2 \text{s}^{-1}} = \text{s},
+\end{equation}
+for $t$. Inserting this scale into Equation \eqref{skalert_sylinder} yields
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = 
+    \frac{z_0^2}{r_0^2} \frac{1}{r} \frac{\partial [N]}{\partial r} + \frac{z_0^2}{r_0^2}  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \frac{z_0^2 [R]_0}{\alpha_N^*}  k_1^* [N] [R] + \frac{ [N-R]_0 z_0^2}{[N]_0 \alpha_N^*}  k_{-1}^* [N-R],
+\end{equation}
+Finally, define the coefficients $\eta$, $\mu$, $\nu$ and $\xi$, 
+\begin{align*}
+    \eta &:= \frac{z_0^2}{r_0^2} = \frac{(\SI{1.5d-8}{\meter})^2}{(\SI{2.2d-7}{\meter})^2} = \SI{4.45d-3}{}, \\
+    %\mu &:= \frac{z_0^2}{r_0^3} =\frac{(\SI{1.5d-8}{\meter})^2}{(\SI{2.2d-7}{\meter})^3} = \SI{2.11d4}{\per\meter}, \\
+    \nu &:= \frac{[R]_0 z_0^2}{\alpha_N^*} k_1^* = \frac{(\SI{1.10d-1}{\mol\per\cubic\meter})\cdot(\SI{1.5d-8}{\meter})^2}{(\SI{8d-7}{\square\meter\per\second})}\cdot (\SI{4d3}{\cubic\meter\per\mol\per\second}) = \SI{1.24d-7}{}, \\
+    \xi &:= \frac{ z_0^2 [N-R]_0 k_{-1}^*}{\alpha_N^* [N]_0} =  \frac{(\SI{1.5d-8}{\meter})^2\cdot(\SI{5}{\per\second})}{(\SI{8d-7}{\square\meter\per\second})\cdot (\SI{3.65}{\mol\per\cubic\meter})}\cdot(\SI{1.10d-1}{\mol\per\cubic\meter})  = \SI{4.24d-11}{},
+\end{align*}
+such that the final scaled version of Equation \eqref{eq: Modelling Eq 1 Unscaled} is
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = 
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \nu [N] [R] +  \xi [N-R].
+    \label{skalert_sylinder2}
+\end{equation}
+Following a similar procedure, the scaled versions of Equations \eqref{eq: Modelling Eq 2  Unscaled} and \eqref{eq: Modelling Eq 3 Unscaled} are % \textcolor{red}{Må erstattes når scalene er korrekt slik at $[\cdot]$ er dimensjonsløse} 
+
+\begin{equation}
+    \frac{\partial [R]}{\partial t} = - \nu \frac{[N]_0}{[R]_0} [N][R] + \xi \frac{[N]_0}{[R]_0} [R-N],
+    \label{skalert_sylinder3}
+\end{equation}
+and 
+\begin{equation}
+    \frac{\partial [R-N]}{\partial t} = \nu \frac{[N]_0}{[R]_0} [N][R] - \xi \frac{[N]_0}{[R]_0} [R-N],
+    \label{skalert_sylinder4}
+\end{equation}
+respectively. Outside the domain $\Omega_\epsilon$ we get
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = 
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2}
+    \label{skalert_sylinder5}
+\end{equation}
+as the scaled version of \eqref{eq: Modelling Eq 4 Unscaled}.
+\begin{comment}
+\textcolor{orange}{Blir det ikke}
+\begin{align*}
+    \frac{\partial R^*}{\partial t^*} &= -k_1 N^* R^* + k_{-1}(R-N)^* \\
+    \frac{R_0 \partial R}{t_0 \partial t} &= -k_1 N_0 R_0 N R + k_{-1}(R-N)_0 (R-N) \\
+    \frac{\partial R}{\partial t} &= - \frac{z_0^2}{\alpha} k_1 N_0 N R + \frac{\frac{z_0^2}{\alpha}}{R_0}k_{-1}(R-N)_0 (R-N) \\
+    &= - \nu\frac{N_0}{R_0}  N R + \xi \frac{N_0}{R_0}(R-N) \\
+\end{align*}
+\textcolor{violet}{Jo stemmer, det blir det}
+\end{comment}
+
+
+\section{Perturbation Analysis}
+Given the scaled system of equations, we try to find an analytical approximation to the system using perturbation theory. Beginning with Equation \eqref{eq:Scaled Modelling equation 2}, we set $\partial [R]^* = \xi_0 + \nu \xi_1 + \nu^2 \xi_2 + \mathcal{O}(\nu^3)$ and insert into the equation. Notice that we have defined $\nu := k_{-1}^*$ for ease of notation.  
+
+\textcolor{orange}{Fra forelesning i termisk sa han at "Molekylene har etter en tid $t$ diffundert til en avstand proporsjonal med $\sqrt{D t}$ $D$ er diffusjonskoeffisienten"}. \textcolor{blue}{Alex: Beregn dette og se om det stemmer ca med tiden som Ulrik har fått fra 1D!}
+
+\textcolor{red}{Tror ikke dette vil fungere pga coupling: prøver singular perturbation nedenfor i stedet. Usikker på om vi bør bruke alpha eller k som "liten" koeffisient. }
+
+Let $\nu := k_{-1}^* > 0$ for ease of notation. The problems when $\nu = 0$ and $\nu \rightarrow 0$ are qualitatively different, meaning that singular perturbation might be a good way to approximate an analytical solution to the system. A 0-order approximation to the outer solution can be found by setting $\nu = 0$, giving the system 
+
+\begin{align}
+    \frac{\partial [N]^*}{\partial t^*} &= \alpha_N^*\nabla^2[N]^*- [N]^*[R]^* ,\\
+    \frac{\partial [R]^*}{\partial t^*} &= - [N]^*[R]^*,\\
+    \frac{\partial [R-N]^*}{\partial t^*} &= [N]^*[R]^*.
+\end{align}
+Again, we see that the two last equations lead to (\textcolor{red}{Dette kan man sikkert også se direkte dersom man skalerer to-sett systemet over først} the relation $\frac{\partial [R]^*}{\partial t^*} + \frac{\partial [R-N]^*}{\partial t^*} = 0 \implies [R]^* + [R-N]^* = \hat{C}(x)$. \textcolor{red}{Igjen, dette hjelper ikke så mye her.}
+
+\textcolor{red}{Prøver å la alpha være liten også $-->$ Det tilsvarer ingen diffusion når alpha settes til 0. Representerer dette situasjonen der reaksjonene dominerer, dvs N har allerede diffundert over kløfta i en transient periode? Inner solution gir dermed denne transiente perioden?}
+
+Let $\mu := \alpha_N^* > 0$ for ease of notation. The problems when $\mu = 0$ and $\mu \rightarrow 0$ are qualitatively different, meaning that singular perturbation might be a good way to approximate an analytical solution to the system. A 0-order approximation to the outer solution can be found by setting $\mu = 0$, giving the system 
+
+\begin{align}
+    \frac{\partial [N]^*}{\partial t^*} &= - [N]^*[R]^* + k_{-1}^*[R-N]^*,\\
+    \frac{\partial [R]^*}{\partial t^*} &= - [N]^*[R]^* + k_{-1}^*[R-N]^*,\\
+    \frac{\partial [R-N]^*}{\partial t^*} &= [N]^*[R]^* - k_{-1}^*[R-N]^*.
+\end{align}
+Subtracting the second equation from the first yields the reduction
+
+\begin{equation}
+    \frac{\partial [N]^*}{\partial t^*} - \frac{\partial [R]^*}{\partial t^*} = 0 \implies [N]^* - [R]^* = D(x).
+\end{equation}
+In addition, we see that $[R]^* + [R-N]^* = C(x)$, meaning that the outer solution can be found directly via the pre-defined functions $C$ and $D$. Next we find the inner solution. Assume the boundary layer is $[0,\delta(\mu)]$, since the diffusion happens from the pre-synaptic neuron ($(t,x) = (0,0)$) to the post-synaptic neuron ($(t,x) = (t^*,z)$). We insert $N(\frac{t}{\delta(\mu)},\mu), R(\frac{t}{\delta(\mu)},\mu)$ and $Z(\frac{t}{\delta(\mu)},\mu)$ into the system of equations, representing the outer solutions of $[N]^*, [R]^*$ and $[R-N]^*$ respectively, such that the system becomes 
+
+\begin{align}
+    \frac{1}{\delta}\frac{\partial N}{\partial t^*} &= \mu\nabla^2N- NR + k_{-1}^*Z,\\
+    \frac{1}{\delta}\frac{\partial R}{\partial t^*} &= - NR + k_{-1}^*Z  ,\\
+    \frac{1}{\delta}\frac{\partial Z}{\partial t^*} &= NR - k_{-1}^*Z.
+\end{align}
+Next we need to choose $\delta$ such that the equations are balanced. \textcolor{red}{Dette gir ikke meg så mye når vi har både tid og romlig dimensjon. Perturbasjon gir kanskje ikke mening i dette tilfellet egentlig, siden diffusjonsleddet ikke påvirker hvordan N oppfører seg i tid?}
+
+After finding the inner solution, the uniform solution is the sum of the inner and the outer solutions subtracted by the limit of the matching condition. 
+
+\section{Numerical Approximation in 1D}
+%\textcolor{violet}{Eirik: Det her blir vel faktisk follow-up nummer 1 når jeg tenker meg om. Jeg kjører på med litt argumentasjon:}
+
+The typical radius of the synaptic cleft is $r_{\text{cleft}}=\SI{0.22}{\micro \meter}$, whereas the typical length is $L = \SI{15}{\nano \meter} \ll r_{\text{cleft}}$. We can therefore approximate the geometry of the synaptic cleft to be a cyllinder with infinite radius, without much loss of generality. This geometrical reduction allows us to neglect end effects along the outer perimeter of the synaptic cleft. If we also assume that the release of neurotransmitters is uniform across the whole surface of the axon terminal, and similarly that the receptors are also distributed uniformly over the surface of the dendritic spine, then we get a system that is completely uniform in $r$, in addition to $\theta$ as already assumed. This reduces the system to a 1D diffusion problem.
+
+We can therefore consider a simplified geometry with only one spatial dimension $z$.
+Then, all neurotransmitters are released at $z = 0, t = 0$, and all receptors lie at the other endpoint $z = L$, $L$ being the length of the synaptic cleft.
+The modelling equations become 
+\begin{align}\label{eq:Modelling Eq 1D_mod_n}
+        & \frac{\partial [N]}{\partial t} = \alpha_N \frac{\partial^2 [N]}{\partial x^2} - k_1 [N][R] + k_{-1}[R-N], \\
+        \label{eq:Modelling Eq 1D_mod_r}
+        &\frac{\partial [R]}{\partial t} = -\frac{\partial[R-N]}{\partial t} = -k_1 [N][R] + k_{-1}[R-N].
+\end{align}
+I.e., we have a given initial concentration of neurotransmitters at $x = 0$, and similarly for the unbound receptors at $x = L$.
+No receptors are bound at $t = 0$.
+As no more neurotransmitters or receptors enter the synaptic cleft after $t = 0$, it is natural to assume Neumann boundary conditions at the endpoints
+\begin{equation}\label{eq:boundary}
+        \frac{\partial [N]}{\partial x}(0, t) = \frac{\partial [N]}{\partial x} (L, t) = 0. 
+\end{equation}
+To solve the system of equations numerically, we introduce a equispaced grid discretization along the $z$-axis, $z_0 = 0, z_1, \hdots, z_K = L$, with $\Delta z = z_{i + 1} - z_i$.
+We also discretize the time as $t_0 = 0, t_{n +1} = t_n + \Delta t, n = 0, 1, 2 \hdots$.
+The discretized concentrations are written as $[N]_{k}^{n}, [R]_k^n, [R-N]_k^n$ at $z_k, t_n$.
+As \eqref{eq:Modelling Eq 1D_mod_r} is an ordinary differential equation, we solve it using forward Euler's method
+\begin{align*}
+        &[R]_k^{n+1} = [R]_k^n + \Delta t \cdot (-k_1[N]_k^n[R]_n^k + k_{-1}[R-N]_k^n), \\
+        &[R - N]_k^{n+1} = [R-N]_k^n -([R]_{k}^{n+1} - [R]_k^n).
+\end{align*}
+After finding $[R]_k^{n+1}$ and $[R-N]_{k}^{n+1}$ we find $[N]_{k}^{n+1}$ by discretizing the reaction-diffusion equation \eqref{eq:Modelling Eq 1D_mod_n} using the implicit Crank-Nicholson scheme given by 
+\begin{align}\label{eq:cn_1D}
+        \frac{[N]_{k}^{n+1} - [N]_{k}^{n}}{\Delta t} =& \frac{\alpha_N}{2 (\Delta z)^2} [ \left( [N]_{k+1}^{n+1} - 2[N]_{k}^{n+1} + [N]_{k-1}^{n+1} \right) \\
+                                                     & +\left( [N]_{k+1}^{n} - 2 [N]_{k}^{n}+ [N]_{k-1}^{n} \right) ] \\
+                                                     &- k_1 \left( \frac{[N]_{k}^{n+1} + [N]_k^n}{2} \right) \left( \frac{[R]_{k}^{n+1} + [R]_k^n}{2} \right) \\
+                                                     &+k_{-1}\left( \frac{[R-N]_{k}^{n+1} + [R-N]_k^n}{2} \right),
+\end{align}
+for $k = 1, \hdots, K - 1$.
+Instead of discretizing the Neumann boundary conditions fictitious grid points, we apply it directly obtaining an unconditionally stable scheme \cite{khaliq}
+\begin{align*}
+        \frac{\partial^2 [N]_0^{n}}{\partial z^2} &\approx \frac{1}{b (\Delta z)^2}([N]_2^n - [N]_1^n), \\
+        \frac{\partial^2 [N]_K^{n}}{\partial z^2} &\approx -\frac{1}{b (\Delta z)^2}([N]_K^n - [N]_{K-1}^n), \\
+\end{align*}
+where $b = \frac{1}{2} + \frac{\sqrt{3}}{3}$.
+On matrix form the system is written
+\begin{equation}\label{eq:system}
+        A^n[N]^{n+1} = B^n[N]^n + C^n,
+\end{equation}
+where
+\begin{align*}
+        &A^n =   
+\begin{bmatrix}
+        \left( 1 + W_0^n \right) & -\frac{V}{b} &   &  &  \\
+        -V & \left(1 + W_1^n \right) & -V  &  &   \\
+         & \ddots & \ddots & \ddots &    \\
+         &  & -V & \left( 1 + W_{K-1}^n \right) & -V   \\
+         &  &  &  -\frac{V}{b} & \left( 1 + W_K^n \right) \\
+\end{bmatrix}
+,\\
+        &B^n = 
+\begin{bmatrix}
+        \left( 1 + Z_0^n \right) & \frac{V}{b} &   &  &  \\
+        V & \left(1 + Z_1^n \right) & V  &  &   \\
+         & \ddots & \ddots & \ddots &    \\
+         &  & V & \left( 1 + Z_{K-1}^n \right) & V   \\
+         &  &  &  \frac{V}{b} & \left( 1 + Z_K^n \right) \\
+\end{bmatrix}
+,\\
+        &b = \frac{1}{2} + \frac{\sqrt{3}}{3}, \\
+        &C^n= \frac{\Delta t k_{-1}}{2}([R-N]_k^{n+1} + [R-N]_k^n ) ,\\
+        &[N]^n = [[N]_0^n \ [N]_1^n \ \cdots \ [N]_K^n]^T ,\\
+        &V = \frac{\Delta t \alpha_N}{2(\Delta z)^2} ,\\
+        &W_k^n = \frac{\Delta t \alpha_N}{(\Delta z)^2} + \frac{\Delta t k_1}{4}([R]_{k}^{n+1} + [R]_k^n), \ k = 1, \hdots, K - 1 \\
+        &W_0^n = W_K^n = \frac{\Delta \alpha_N}{b(\Delta z)^2} + \frac{\Delta t k_1}{4}([R]_{k}^{n+1} + [R]_k^n),\\
+        &Z_k^n = -\frac{\Delta t \alpha_N}{(\Delta z)^2} + \frac{\Delta t k_1}{4}([R]_{k}^{n+1} + [R]_k^n), \ k = 1, \hdots, K- 1, \\
+        &Z_0^n = Z_K^n = -\frac{\Delta \alpha_N}{b(\Delta z)^2} + \frac{\Delta t k_1}{4}([R]_{k}^{n+1} + [R]_k^n).
+\end{align*}
+To implement an example we choose parameter values as given in the assignment description, shown in table \ref{tab:Constants}.
+The grid is discretized into $n_G = 100$ intervals.
+We choose the initial conditions as in \eqref{eq:ic}, i.e., $[N]_0^0 = 360, [R]_{n_G}^0 = 11$.
+The evolution of bound receptors is shown in figure \ref{fig:receptors}.
+Using these initial values makes the diffusion process happen very fast, much faster than the reaction, which can be seen in figure 
+This can be seen as an argument for a geometrical reduction of the problem, removing the $z$-axis completely.
+
+\begin{figure}[tb]
+        \centering
+        \includegraphics[width=0.5\linewidth]{./code/figures/receptors.pdf}
+        \caption{Evolution of bound receptors at the membrane using a one dimensional model. 
+                The modelling is done through a finite difference scheme with forward differencing in the time dimension, and Crank-Nicolson in the spatial dimension. 
+                Supposing the transmission happens when one half of the receptors are bound, we find the time to be around 50 nanoseconds.
+        }
+        \label{fig:receptors}
+\end{figure}
+\begin{figure}[tb]
+        \centering
+        \includegraphics[width=0.5\linewidth]{./code/figures/neurotransmitters.pdf}
+        \caption{Concentration of neurotransmitters at the endpoint.
+        As the concentration reaches a constant value quickly, the diffusion process is much faster than the binding of receptors.}
+        \label{fig:neurotrans}
+\end{figure}
+
+
+
+%\textcolor{blue}{Kanskje noe av dette kan brukes? %\url{https://scipy-cookbook.readthedocs.io/items/CoupledSpringMassSystem.html}}
+
+
+\section{Numerical Approximation in 2D}
+%\subsection{Explicit solution}
+
+\subsection{Implicit Solver}
+In cylindrical coordinates, the first scaled model equation is
+\begin{equation*}
+    \frac{\partial [N]}{\partial t} = 
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} + \eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \nu [N] [R] +  \xi [N-R],
+\end{equation*}
+\begin{equation*}
+    \eta := \frac{z_0^2}{r_0^2}, \quad
+    \nu := \frac{[R]_0 z_0^2}{\alpha_N^*} k_1^*, \quad
+    \xi := \frac{ z_0^2 [N-R]_0 k_{-1}^*}{\alpha_N^* [N]_0}. 
+\end{equation*}
+Let $[N]_{i,j}^{n}$ be an approximation to $[N](r_i, z_j, n \Delta t)$. Crank Nicolson gives the following equation, 
+\begin{align*}
+    \frac{[N]_{i,j}^{n+1} - [N]_{i,j}^{n}}{\Delta t} &= \frac{\eta}{2 r_i (\Delta r)^2} \left[r_{i+\frac{1}{2}} \left( [N]_{i+1,j}^{n+1} - [N]_{i,j}^{n+1} \right) - r_{i-\frac{1}{2}} \left( [N]_{i,j}^{n+1} - [N]_{i-1,j}^{n+1} \right) \right] \\
+    &+ \frac{\eta}{2 r_i (\Delta r)^2} \left[r_{i+\frac{1}{2}} \left( [N]_{i+1,j}^{n} - [N]_{i,j}^{n} \right) - r_{i-\frac{1}{2}} \left( [N]_{i,j}^{n} - [N]_{i-1,j}^{n} \right) \right] \\
+    &+ \frac{1}{2 (\Delta z)^2} \left[ [N]_{i,j+1}^{n+1} - 2[N]_{i,j}^{n+1} + [N]_{i,j-1}^{n+1} \right] \\
+    &+ \frac{1}{2 (\Delta z)^2} \left[ [N]_{i,j+1}^{n} - 2[N]_{i,j}^{n} + [N]_{i,j-1}^{n} \right] \\
+    & - \nu \left( \frac{[N]_{i,j}^{n+1} + [N]_{i,j}^{n}}{2} \right)\left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right) \\
+    &+ \xi \left( \frac{[R-N]_{i,j}^{n+1} + [R-N]_{i,j}^{n}}{2} \right).
+\end{align*}
+Separating such that all $[N]^{n+1}$-terms are on the left hand side and all $[N]^{n}$-terms on the right hand side we obtain
+\begin{align*}
+    & [N]_{i,j}^{n+1} - \frac{\Delta t \eta }{2 r_i (\Delta r)^2} r_{i+\frac{1}{2}} \left( [N]_{i+1,j}^{n+1} - [N]_{i,j}^{n+1} \right) + \frac{\Delta t \eta}{2 r_i (\Delta r)^2} r_{i-\frac{1}{2}} \left( [N]_{i,j}^{n+1} - [N]_{i-1,j}^{n+1} \right) \\  
+    &- \frac{\Delta t}{2 (\Delta z)^2} \left[ [N]_{i,j+1}^{n+1} - 2[N]_{i,j}^{n+1} + [N]_{i,j-1}^{n+1} \right]  - \frac{\Delta t \nu}{2} [N]_{i,j}^{n+1} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right) \\ 
+    &= [N]_{i,j}^{n} + \frac{\Delta t \eta}{2 r_i (\Delta r)^2} \left[r_{i+\frac{1}{2}} \left( [N]_{i+1,j}^{n} - [N]_{i,j}^{n} \right) - r_{i-\frac{1}{2}} \left( [N]_{i,j}^{n} - [N]_{i-1,j}^{n} \right) \right] \\
+    &+ \frac{\Delta t}{2 (\Delta z)^2} \left[ [N]_{i,j+1}^{n} - 2[N]_{i,j}^{n} + [N]_{i,j-1}^{n} \right] -  \frac{\Delta t \nu}{2} [N]_{i,j}^{n} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right) \\
+    &+  \xi \left( \frac{[N-R]_{i,j}^{n+1} + [N-R]_{i,j}^{n}}{2} \right).
+\end{align*}
+This system of equations can be expressed as
+\begin{equation}
+    A^{n} \boldsymbol{[N]}^{n+1} = B^{n} \boldsymbol{[N]}^{n} + \boldsymbol{C}^{n},
+\end{equation}
+which we want to solve for $\boldsymbol{[N]}^{n+1}$. We let  $\boldsymbol{[N]}^{n}$ be of dimension $(n_r \cdot n_z, 1)$, where $n_r$ is the number of grid points in $r$-direction, $n_z$ is the number of grid points in $z$-direction. We therefore need a map from a point $(i,j)$ in the $rz$-plane to an index between $0$ and $n_r \cdot n_z - 1$. We used the map $M(i,j) \mapsto j + i \cdot n_z$. $\boldsymbol{C}^n$ has the same dimension as $\boldsymbol{[N]}^n$ and $A^n$ and $B^n$ has dimension $(n_r \cdot n_z, n_r \cdot n_z)$. Matrix $A^n$ and $B^n$ are on the same form, but the constants differ slightly.
+\begin{equation}
+A^n = 
+    \begin{bmatrix}
+    a_{i,j} & a_{i,j+1} & 0 & \hdots & 0 & a_{i+1,j} & 0 & \hdots & 0 &  0 \\
+    a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots & 0 & a_{i+1,j} & 0 & \hdots & 0 \\
+    0 & a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots & 0  & a_{i+1,j} & 0 & \hdots \\
+    \hdots & 0 & a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots & 0  & a_{i+1,j} & 0 \\
+    0 & \hdots & 0 & a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots & 0  & a_{i+1,j}  \\
+    \vdots & \vdots & \vdots &\vdots &\vdots &\vdots &\vdots &\vdots &\vdots &\vdots \\
+    a_{i-1,j} & 0 & \hdots & 0 & a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots & 0  \\
+    0 & a_{i-1,j} & 0 & \hdots & 0 & a_{i,j-1} & a_{i,j} & a_{i,j+1} & 0 & \hdots \\
+    \hdots & 0 & a_{i-1,j} & 0 & \hdots & 0 & a_{i,j-1} & a_{i,j} &  a_{i,j+1} & 0 \\
+    0 & \hdots & 0 & a_{i-1,j} & 0 & \hdots & 0 & a_{i,j-1} & a_{i,j} &  a_{i,j+1} \\
+    0 & 0 &  \hdots & 0 & a_{i-1,j} & 0 & \hdots & 0 & a_{i,j-1} & a_{i,j} \\
+    \end{bmatrix}
+\end{equation}
+with elements
+\begin{align*}
+    a_{i,j} &=  1 + \frac{\Delta t}{(\Delta z)^2} + \eta \frac{\Delta t r_{i+\frac{1}{2}}}{2r_i(\Delta r)^2} + \eta \frac{\Delta t  r_{i-\frac{1}{2}}}{2r_i(\Delta r)^2}  - \nu \frac{\Delta t }{2}(R[j + i \cdot n_z,n+1]-R[j + i \cdot n_z,n]) \\
+    &= 1 + \frac{\Delta t}{(\Delta z)^2} + \eta \frac{\Delta t }{2(i \Delta r)(\Delta r)^2)}((i+0.5)\Delta r + (i-0.5)\Delta r)  - \nu \frac{\Delta t }{2}(R[j + i \cdot n_z,n+1]-R[j + i \cdot n_z,n]) \\
+    &= 1 + \frac{\Delta t}{(\Delta z)^2} + \eta \frac{\Delta t }{(\Delta r)^2}  - \nu \frac{\Delta t }{2}(R[j + i \cdot n_z,n+1]-R[j + i \cdot n_z,n]) \\
+    a_{i+1,j} &=  - \eta \frac{\Delta t }{2 i (\Delta r)^2} (i+0.5) \\
+    a_{i-1,j} &=  - \eta \frac{\Delta t}{2 i (\Delta r)^2} (i-0.5) \\
+    a_{i,j+1} &=  a_{i,j-1} = -\frac{\Delta t }{2 (\Delta z)^2}.\\
+\end{align*}
+ 
+We have used $r_i = i \Delta r$. $B^n$ is as mentioned on the same form as $A^n$ \textcolor{orange}{Trenger kanskje ikke skrive opp matrise $B$ også?} 
+\\
+\begin{equation}
+B = 
+    \begin{bmatrix}
+    b_{i,j} & b_{i,j+1} & 0 & \hdots & 0 & b_{i+1,j} & 0 & \hdots & 0 &  0 \\
+    b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots & 0 & b_{i+1,j} & 0 & \hdots & 0 \\
+    0 & b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots & 0  & b_{i+1,j} & 0 & \hdots \\
+    \hdots & 0 & b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots & 0  & b_{i+1,j} & 0 \\
+    0 & \hdots & 0 & b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots & 0  & b_{i+1,j}  \\
+    \vdots & \vdots & \vdots &\vdots &\vdots &\vdots &\vdots &\vdots &\vdots &\vdots \\
+    b_{i-1,j} & 0 & \hdots & 0 & b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots & 0  \\
+    0 & b_{i-1,j} & 0 & \hdots & 0 & b_{i,j-1} & b_{i,j} & b_{i,j+1} & 0 & \hdots \\
+    \hdots & 0 & b_{i-1,j} & 0 & \hdots & 0 & b_{i,j-1} & b_{i,j} &  b_{i,j+1} & 0 \\
+    0 & \hdots & 0 & b_{i-1,j} & 0 & \hdots & 0 & b_{i,j-1} & b_{i,j} &  b_{i,j+1} \\
+    0 & 0 &  \hdots & 0 & b_{i-1,j} & 0 & \hdots & 0 & b_{i,j-1} & b_{i,j} \\
+    \end{bmatrix}
+\end{equation}
+but with elements
+\begin{align*}
+    b_{i,j} &= 1 - \frac{\Delta t}{(\Delta z)^2} - \eta \frac{\Delta t}{(\Delta r)^2}  - \nu \frac{\Delta t }{2}(R[j + i \cdot n_z,t+1]-R[j + i \cdot n_z,t]) \\
+    b_{i+1,j} &=  \eta \frac{\Delta t}{2 i (\Delta r)^2} (i+0.5) \\
+    b_{i-1,j} &=  \eta \frac{\Delta t}{2 i (\Delta r)^2} (i-0.5) \\
+    b_{i,j+1} &= b_{i,j-1} = \frac{\Delta t }{2 (\Delta z)^2}.\\
+\end{align*}
+The vector $\boldsymbol{C}^n$ is 
+\begin{equation}
+\boldsymbol{C}^n = \xi
+    \begin{bmatrix}
+        [N-R]^{n+1}[0]-[N-R]^{n}[0] \\
+        [N-R]^{n+1}[1]-[N-R]^{n}[1] \\
+        [N-R]^{n+1}[2]-[N-R]^{n}[2] \\
+        \vdots \\
+        [N-R]^{n+1}[n_z-1]-[N-R]^{n}[n_z-1] \\
+        [N-R]^{n+1}[n_z]-[N-R]^{n}[n_z] \\
+        [N-R]^{n+1}[n_z+1]-[N-R]^{n}[n_z+1] \\
+        \vdots \\
+        [N-R]^{n+1}[n_r \cdot n_z-1]-[N-R]^{n}[n_r \cdot n_z-1] \\
+    \end{bmatrix}
+\end{equation}
+All $\boldsymbol{C}^n$, $A^n$ and $B^n$ are time dependent as they depend on the densities of the receptors and the concentration of [N-R]. Thus the procedure of the numerical scheme is as follows 
+\begin{enumerate}
+    \item Given initial values $[N]^0$, $[R]^0$ and $[N-R]^0$, for $n = 0, 1, ..., n_t$
+    \begin{enumerate}
+        \item Use Runge Kutta to find values for  $\boldsymbol{[R]}^{n+1}$ and $\boldsymbol{[N-R]}^{n+1}$. \begin{equation}
+            [R]^{n+1}_{i,j} = [R]^{n}_{i,j} + \Delta t \left[- \nu \frac{[N]_0}{[R_0]} [N]^{n} [R]^{n} + \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
+        \end{equation} 
+        \begin{equation}
+            [N-R]^{n+1}_{i,j} = [N-R]^{n}_{i,j} + \Delta t \left[ \nu \frac{[N]_0}{[R_0]} [N]^{n} [R]^{n} - \xi \frac{[N]_0}{[R_0]} [R-N]^{n} \right]
+        \end{equation} 
+        \item Insert these values into $A^n$, $B^n$ and $\boldsymbol{C}^n$.
+        \item Calculate the inverse of $A^n$. 
+        \item Find $[N]^{n+1} = (A^n)^{-1} B^n [N]^{n} + (A^n)^{-1}C^n$.  
+    \end{enumerate}
+\end{enumerate}
+Unfortunately we encountered some problems and did not get any good results.
+
+
+\section{Clearance of Neurotransmitters}
+The clearance of the neurotransmitters can be described using
+\begin{equation*}
+\ce{$T$ + $N$ <=>[$k_2$][$k_{-2}$] $T-N$ ->[$k_3$] $T$ + $N_{\text{inactive}}$}
+\end{equation*}
+where $T$ are the transporters and $N_{\text{inactive}}$ are the inactive neurotransmitters. From this, we get that
+\begin{equation*}
+    \frac{\partial [N]}{\partial t} = - k_2 [N][T] + k_{-2} [T-N]
+\end{equation*}
+Adding this to the system, \eqref{skalert_sylinder2} become
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = 
+    \eta \frac{1}{r} \frac{\partial [N]}{\partial r} +\eta  \frac{\partial^2 [N]}{\partial r^2}  +  \frac{\partial^2 [N]}{\partial z^2} -  \nu [N] [R] +  \xi [N-R] - k_2 [N][T] + k_{-2} [T-N]
+\end{equation}
+whereas \eqref{skalert_sylinder3}, \eqref{skalert_sylinder4} and \eqref{skalert_sylinder5} stay the same, if we assume that the reaction between $T$ and $N$ only happens at the dendritic spine.
+%\textcolor{violet}{Er dette nok for follow-up 2? Det står bare "integrate the effect into your model", og det har jeg jo strengt tatt gjort. Regner jo egentlig med han mener vi skal løse det også}
+
+\section{Coupling with Flow}
+The problem is extended by adding an underlying moving fluid moving in the synaptic cleft. Unless we assume that the flow is either rotationally symmetric, or going only in the direction of our z-axis, which are both quite unrealistic, we can no longer use the geometric reductions from section \ref{Section: Geometry}. Therefore, in this section, we assume that the synaptic cleft has a rectangular prismic geometry, and describe the modelling equations using cartesian coordinates.
+
+We will assume the fluid flow to be of the simplest form possible; laminar, only in the direction of the x-axis (perpendicular to the synaptic cleft), and uniform in the y- and z-axes.
+
+Starting with equation \eqref{Eq: Ficks Law}, we now have that the total flux density of neurotransmitters is a sum of the effect due to diffusion, $J_N$, and the effect of the fluid itself moving. If we consider a surface parallel to the yz-plane, the contribution from the fluid flow will be $[N] v$, where $v$ is the velocity of the fluid. Using this, \eqref{Eq: Ficks Law} becomes
+\begin{equation}
+    J_N + [N]v = -\alpha_N \nabla [N]
+\end{equation}
+Note that the assumptions on the fluid field $v$ means $[N]v$ is a vector field with 0 in the y- and z-components everywhere. This means that when taking the gradient of both sides, we get
+\begin{align}
+\begin{split}
+    & \nabla J_N + \nabla ([N]v) = -\alpha_N \nabla^2 [N]\\
+    \Longleftrightarrow & \nabla J_N = -\alpha_N \nabla^2 [N] - v\frac{\partial [N]}{\partial x}
+\end{split}
+\end{align}
+Finally, conservation of mass gives 
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = \alpha_N \nabla^2 [N] + v\frac{\partial [N]}{\partial x}
+\end{equation}
+Adding the effects of the chemical reactions, the modelling equations then read
+\begin{align}
+\begin{split}
+     \frac{\partial [N]}{\partial t} &= \alpha_N \left( \frac{\partial^2 [N]}{\partial x^2} + \frac{\partial^2 [N]}{\partial y^2} + \frac{\partial^2 [N]}{\partial z^2} \right) + v\frac{\partial [N]}{\partial x} -  k_1 [N] [R] +  k_{-1} [N-R]\\
+     \frac{\partial [R]}{\partial t} &= - k_1[N][R] + k_{-1}[R-N]\\
+    \frac{\partial [R-N]}{\partial t} &= k_{-1}[N][R] - k_{-1}[R-N],
+\end{split}
+\end{align}
+inside the domain $\Omega_\epsilon$, and 
+\begin{equation}
+    \frac{\partial [N]}{\partial t} = \alpha_N \left( \frac{\partial^2 [N]}{\partial x^2} + \frac{\partial^2 [N]}{\partial y^2} + \frac{\partial^2 [N]}{\partial z^2} \right) + v\frac{\partial [N]}{\partial x}
+\end{equation}
+outside.
+
+\begin{comment}
+\section{Kommentarer}
+\textcolor{blue}{Ulrik: Noen tanker. Jeg er helt med på å følge fremgangsmåten i springer-artikkelen. Om vi skal kjøre på med et sylinder-grid, så tror jeg vi må ha en god del inspirasjon (dvs. kopiere hele fremgangsmåten, inkludert triksene i endepunktene, $z_0, z_L$). Alternativt så lager vi en mye enklere modell i 2D (eller 1D). 
+Da slipper vi mye knot med detaljer i den numeriske implementeringen (tror jeg ihvertfall).}
+
+\textcolor{violet}{Eirik: Ja jeg tenkte også denne antagelsen var fornuftig. Da kan man vel droppe indeks $j$ i videre utledning?}
+\textcolor{blue}{Alex: Han antok at "transition function" ved utledning av diffusion i slidsene var isotrop, så jeg tenker at dette høres fornuftig ut.}
+\textcolor{magenta}{Ulrik: På teams sist uke ble det diskutert litt initial values og boundary conditions.
+Oppsummert så kunne man gjøre litt som man ville, uniforme startverdier, point source, alt var "yes sure, you can do that!".
+Samme med grenseverdier, om man skulle ha Dirichlet eller Neumann. 
+Neumann gir mest mening, men om man skulle modellert videre med "lekkasje" til andre neuroner kunne man prøve seg fram med Dirichlet.}
+
+
+\subsection{RK to solve the differential equations for the  chemical reactions}
+Kan bruke RK for å finne $[R]^{n}_{i, j}$,  $[R]^{n+1}_{i, j}$, $[N-R]^{n}_{i, j}$ og $[N-R]^{n+1}_{i, j}$
+\begin{align*}
+\frac{\partial [N]}{\partial t} &= - k_{1} [N][R] + k_{-1}[N-R] \\
+\frac{\partial [R]}{\partial t} &= - k_{1} [N][R] + k_{-1}[N-R] \\
+\frac{\partial [N-R]}{\partial t} &= k_{1} [N][R] - k_{-1} [N-R] \\
+\end{align*}
+
+
+
+\textcolor{violet}{Eirik: Ok så tanken er en "alternerende" løser, som bytter mellom å finne bidraget fra kjemisk reaksjon i neste tidssteg ved å bruke konsentrasjonene for nåværende tiddsteg i en RK, og så bruker dette bidraget i crank-nicholson for å finne konsentrasjonene ved neste tidssteg? Det gir vel forsåvidt mening, men jeg har lite peiling på stabiliteten på en sånn approach.}
+\textcolor{orange}{Karen: Ja stemme, det va det eg mente. Tror det e sånn de har gjort det i denne: https://link.springer.com/content/pdf/10.1007/s10827-010-0289-5.pdf. Der har de et teorem som sie "The finite difference scheme, Eqs. (27a)– (27c), with the initial and boundary conditions, Eqs. (14a)–(16b), is unconditionally stable with respect to the initial condition and source term.". men hvis me har litt anderledes ligninger så må me jo sjekke om det gjelde for oss og. Og ja vet ikkje om dette e beste måten/funke ennå.}
+\textcolor{red}{Ulrik: Dag foreslår òg Crank-Nicholson i forumet pga. stabilitet.}
+\\
+\textcolor{orange}{Karen: Skulle me starta med å droppe z-koordinaten? liksom $\varepsilon \to 0$ eller blir det feil?}
+
+\textcolor{violet}{Eirik: Tror vi må beholde z-koordinaten, for ellers blir det vel som å si at bredden på den synaptiske kløfta er 0? (som kanskje er mer likt første follow-up oppgave?) Jeg ser forsåvidt ikke helt hvordan man kan ta høyde for $\epsilon \to 0$ tho. Den eneste ideen jeg hadde var å la $k_1$ og $k_{-1}$ være avhengig av $z$, type
+$$
+\hat{k}_{1}(i,j,k) = \left\{
+\begin{array}{ll}
+    k_1 & k = 0 \\
+    0 & k \geq 1
+\end{array}
+\right.
+$$
+og tilsvarende for $k_{-1}$. Da får vi modellert at reaksjonen mellom R og N kun skjer inni $\Omega_\epsilon$, samt at hvis man lar antallet grid points i z-retning gå mot uendelig, så vil det bli som om $\epsilon \to 0$. Dette gjør jo $k$-ene ganske lite glatte da, så om det fucker med stabiliteten, det vet jeg ikke.}
+\textcolor{orange}{Karen: enig!}
+
+\section{Kode som kanskje kan hjelpe}
+\textcolor{blue}{Alex: har ikke gått gjennom denne koden foreløpig, men kanskje den kan hjelpe. Fant fra numdiff. }
+\begin{lstlisting}
+def calc_sol(x, t, order, theta, plot = False):
+    """ 
+    order = 1: Use first oder disc. on BC.
+    order = 2: Use second order disc. on BC.
+    theta = 1: Backward Euler.
+    theta = 1/2: Crank Nicolson (Trapezoidal Rule).
+    """
+    M = len(x)-1
+    N = len(t)-1
+    
+    # Construct Q.
+    data = np.array([np.full(M+1, 1), np.full(M+1, -2), np.full(M+1, 1)])
+    diags = np.array([-1, 0, 1])
+    Q = spdiags(data, diags, M+1, M+1,format='lil')
+    if order == 1:
+        Q[0,:3] = [-1,0,1]
+        Q[-1,-3:] = [1,0,-1]
+    elif order == 2:
+        Q[0, 1] = Q[-1, -2] =  2
+    Q = Q.tocsr()
+    
+    sol = np.zeros((N+1,M+1))  
+    sol[0,:] = initial(x)
+    
+    k = t[1]-t[0]
+    h = x[1]-x[0]
+    r = k/h**2
+    
+    lhs = identity(M+1) - theta*r*Q
+    b = identity(M+1) + (1-theta)*r*Q
+    for n in range(N):
+        rhs = b @ sol[n,:]
+        sol[n+1,:] = spsolve(lhs,rhs)
+    
+    return sol
+\end{lstlisting}
+
+\section{Muligens nyttige kilder}
+\begin{itemize}
+    \item \verb$https://en.wikipedia.org/wiki/Reaction%E2%80%93diffusion_system$
+    \item \verb$https://www-m6.ma.tum.de/~kuttler/script_reaktdiff.pdf$
+    \item \verb$https://www.uni-muenster.de/imperia/md/content/physik_tp/lectures/ws2016-2017/num_methods_i/rd.pdf$
+    \item \verb$https://kluedo.ub.uni-kl.de/frontdoor/deliver/index/docId/5960/file/mastersthesis_blandfort.pdf$
+    \item \verb$https://iopscience.iop.org/article/10.1088/0034-4885/64/7/202/pdf$
+    \item \verb$https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1282074/pdf/biophysj00061-0065.pdf$
+    \item \verb$https://pdf.sciencedirectassets.com/271059/1-s2.0-S0166223600X00252/1-s2.0-S0166223696200505/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEKL%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQCANBPBC%2B4k5nsrEIdzAu%2FJGHYOPeDNdktCP8nQEX%2F1AAIhANrY%2F8eg9NLMPrchQ8GnX3vHz3Wvs%2FKdIS%2BUNOlyI%2BeCKtUECIv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBRoMMDU5MDAzNTQ2ODY1Igybv3qutn1b%2FDud2mUqqQS5FS0PVGZqosFvmAiRZzBnOCx38T8dCDLimvrTzBEnXFMC8o9H%2FA%2Bw%2BBCcro5NUjxzR1uJX0%2BDz4%2B2HGy%2FIOjuo0p51Jrd9VcC0TO5Bfnp6ZhD%2FGhcdFqtrGLwUlRQPunmmdcisgtQFeKJTJ0TIyShjH08Y7tu0TSVL7pnBxgVbuu8cLqdLWUXqIi1v4cSRpwMStk08SRS0SZdvKSMwRN54YeiwvtsonhB4yrTVNoNrU%2Bl%2FY5ugyMKo4iitAwwl5b7pxyoEteHjp4QApcpr%2B1BsxX4ATrF%2F%2FQKd%2BuuGGkULQoaz1s2sRZ3OjX4ystAOKPBqFOBfPYtq2oW12%2FDD3e3sZNkwMy0TTEOjcxxnQpRXqqBSCNuPWy8193A3dLhFsoIU%2BmGactye%2B5A0%2F5C26%2F0Wl7v3xuHpM5zlGcYb0ZsV3LakOzj5fQngrnGIWdum9SUpgnn7lreU07hxlyer5xhF888B5QOyUsQ4t8vuiL%2BID%2FQFl5FLP221%2F1L%2B8Rf1eglj%2FriGtCC2ZR2UK7zCQgB%2B%2F979rCobLmlhDHVd%2F9Q918NVOyoXRhN4krchsKtaH5MyPctYQm%2BF0Vk1cDUoB3oGTxYuGxFAmo9%2B%2Fo2DSEDmzmFLJ3OyFi9Gxvy7Cg9i2mY1F%2B6%2BF%2F%2BfAAPpmCHzze3C88uVTnGVP8guY5dhODSl4HJk7MPY7MwQexfVn%2FqMVppFpwlCKgGA75kU4IKar8HeKQvM5bIy4MKMI3Lg5sGOqgB5DT83nyGTQop2hch5d8q7Uqzna09ok%2BgyggGIY6zJBQfZgUBRWPx4MrLEWRVy9j5nZSnABL5LnV%2F8IawtIvX4hT4rgNrTV47ZmLbjmt9PCpDfJC9c2KhE2wkD2AzbwfVhRGKOxPl80lDA8DXFIaoyMGnhZz%2FIYGVaxmeEB0JUk%2FFgtkjrSspA%2FTOd%2BvinoLTMDbPkO3fTrbABY5Je0mD6E8lLITz6%2BYC&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20221101T110633Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTY55777FDF%2F20221101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=bb537df5c68ccf9b29161c24d91d81bfd4b8f141851b7334993bcb458e2abdf9&hash=d3a02d71261b5b541207f76697214928bde07945a1cb38f3e0e9fbc50f69ef7d&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=S0166223696200505&tid=spdf-2ab0ea79-c3d0-4344-974e-851cdb61ef8e&sid=3f6ebeed895e75426c6bb66707c12ad8c103gxrqb&type=client&ua=51545456575e5652535f&rr=763429641956b524$ (crosstalk etc)
+\end{itemize}
+
+Dette ligner veldig på oppgaven vår, men har ikke tilgang: \verb$https://online.ucpress.edu/abt/article-abstract/81/6/435/92402/Understanding-the-Role-of-Diffusion-in-Synaptic?redirectedFrom=fulltext$
+
+Denne ser ganske lik ut som oppgaven vår: \verb$https://isn.ucsd.edu/courses/beng221/problems/2013/project-11-Modelling%20Diffusion%20Process%20of%20Neurotransmitter%20Across%20Synapse.pdf$
+
+Ser lovende ut: 
+\verb$https://link.springer.com/content/pdf/10.1007/s10827-010-0289-5.pdf$
+
+Dokumentasjon til MRST, som han fyren bruker i matlab kode sin \verb$https://www-sintef-no.translate.goog/contentassets/2551f5f85547478590ceca14bc13ad51/index.html?_x_tr_sl=en&_x_tr_tl=no&_x_tr_hl=no&_x_tr_pto=sc#$. 
+
+
+Kode fra fyren bruker løsere fra MRST hos Sintef, veldig unyttig spør du meg.
+
+\includegraphics[width=\textwidth]{nonlinearSolverSintef.png}
+
+
+\includegraphics[width=\textwidth]{nicholson.png}
+Bildet over er hentet fra \verb$https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1282074/pdf/biophysj00061-0065.pdf$
+
+\section{Model}
+
+A possible model for the synaptic neurotransmission, i.e. the sequence that covers the motion and activity of the neurotransmitters and receptors in the intercellular space, is based on a \textit{reaction-diffusion system}. It is assumed that the neurotransmitters "move" via two different processes. First, they diffuse across the synaptic cleft, following the diffusion equation
+
+\begin{equation}
+    \mathbf{N}_t = k\nabla^2\mathbf{N}, 
+\end{equation}
+where $k$ is a diffusion constant and $\mathbf{N}(\mathbf{x}, t)$ is a vector function describing the number of neurotransmitters $N$ at position $\mathbf{x}$ at time $t$. Second, the binding process between neurotransmitters and receptors is modeled as a reversible chemical reaction 
+
+\begin{equation}
+    \ce{R + N <=>[$k_1$][$k_{-1}$] R-N},
+\end{equation}
+where $R$ represents receptors on the post-synaptic neuron, $N$ the neurotransmitters emitted from the pre-synaptic neuron, $k_1$ a rate (probability) of binding of neurotransmitters and $k_{-1}$ a rate (probability) that a bound receptor releases a neurotransmitter. This chemical reaction can be modeled by the equations
+
+\begin{align}
+    \frac{\mathrm{d}[N]}{\mathrm{d}t} &= -k_1[N][R] + k_{-1}[R-N], \\
+    \frac{\mathrm{d}[R]}{\mathrm{d}t} &= -k_1[N][R] + k_{-1}[R-N],
+\end{align}
+where $[\cdot]$ represents the concentration of a substance. In total, the reaction diffusion process takes the form 
+
+\begin{equation}
+    \frac{\mathrm{d}\mathbf{N}}{\mathrm{d}t} = k\nabla^2\mathbf{N} - k_1[N][R] + k_{-1}[R-N].
+\end{equation}
+DIMENSJONER? \\
+
+Define the vector $\mathbf{Y} = \begin{pmatrix} N & R \end{pmatrix}^T$, such that the equation may be written as
+
+\begin{align}
+    \frac{\mathrm{d}\mathbf{Y}}{\mathrm{d}t} &= D\nabla^2\mathbf{Y} - K_1\mathbf{Y} + K_{-1}\mathbf{Y}\\
+    &= \begin{pmatrix}D_N & 0 \\ 0 & D_R\end{pmatrix}\nabla^2\mathbf{Y} - k_1\begin{pmatrix}1 & 1\\1&1\end{pmatrix}\mathbf{Y} + k_{-1}\begin{pmatrix}1 & 1\\1&1\end{pmatrix}\mathbf{Y}, \hspace{0.5em} \text{FEIL}.
+\end{align}
+is a two-component reaction diffusion system. 
+
+Using the "General form of reaction rate equation" the chemical reaction can instead be modeled by the equations
+
+\begin{align}
+    K &= -k_1[N][R] + k_{-1}[R-N], \\
+    \frac{\mathrm{d}[R]}{\mathrm{d}t} &= K, \hspace{0.5em} \text{Left side}\\ 
+    \frac{\mathrm{d}[N]}{\mathrm{d}t} &= K, \hspace{0.5em} \text{Left side}\\
+    \frac{\mathrm{d}[R-N]}{\mathrm{d}t} &= -K, \hspace{0.5em} \text{Right side}\\
+\end{align}
+
+Perhaps a more correct reaction diffusion equation for the neurotransmitters is
+
+\begin{equation}
+    \frac{\mathrm{d}[N]}{\mathrm{d}t} = \alpha_N\nabla^2[N] - k_1[N][R] + k_{-1}[R-N],
+\end{equation}
+when in $\Omega(\epsilon)$. Similarly, the reaction diffusion equation for the receptors when in $\Omega(\epsilon)$ is \textcolor{red}{Jeg tror ikke det er diffusjon av $[R]$, da vil ligningene være gyldige i hele  $\Omega$, ikke bare i $\Omega_\epsilon$, siden $[R] = [R-N] = 0$ utenfor $\Omega_\epsilon$.}
+
+\begin{equation}
+    \frac{\mathrm{d}[R]}{\mathrm{d}t} = \alpha_R\nabla^2[R] - k_1[N][R] + k_{-1}[R-N], 
+\end{equation}
+while the reaction diffusion equation for the "bounded chemical" is 
+
+\begin{equation}
+    \frac{\mathrm{d}[R-N]}{\mathrm{d}t} = k_1[N][R] - k_{-1}[R-N].
+\end{equation}
+Thus we have three equations in $\Omega(\epsilon)$. When in the domain from the pre-synaptic neuron to the beginning of $\Omega(\epsilon)$, there only exists neurotransmitters, meaning that we are looking at a simple diffusion equation of the form 
+
+\begin{equation}
+    \frac{\mathrm{d}[N]}{\mathrm{d}t} = \alpha_N\nabla^2[N],
+    \label{eq:4}
+\end{equation}
+assuming that $\alpha_N$ is constant throughout the synaptic cleft \textcolor{red}{Er dette en ok assumption? Virker litt vel forenklende kanskje, men vet ikke om den er nødvendig engang. De har hvertfall gjort det i det ene prosjektet som er linket nederst (Modeling Diffusion Process of Neurotransmitter Across Synapse)} Denote by $c_N, c_R$ and $c_{R-N}$ the concentrations of $N, R$ and $R-N$ respectively. 
+
+
+Let the synaptic cleft be denoted by $\Omega$. In order to be able to use these equations we will define a volumetric domain $\Omega(\epsilon)$ where the receptors are detached from the membranes. This area is defined by the thickness $\epsilon$. Inside this domain, the equations can correctly be used. Then, $\epsilon \longrightarrow 0$ will give the modeling equations we are looking for. Define $c(t,x), \hspace{0.3em} [c(t,x)] = \SI{}{\mol\,\meter^{-3}}$ as the concentration of neurotransmitters in the synaptic cleft ($\Omega$). In addition, define a pseudo-concentration of free receptors in $\Omega(\epsilon)$, $P(t,x) \in (0,1)$. $P$ thus represents the fraction of receptors that are free at a position $x$ on the post-synaptic neuron, when $\epsilon \longrightarrow 0$. Then the equation becomes 
+
+\begin{equation}
+    \frac{\mathrm{d}c}{\mathrm{d}t} = \alpha_N\nabla^2c - k_1c[R] + k_{-1}[R]c^{-1},
+\end{equation}
+which is our modeling equation \textcolor{red}{Need to remove the $[R]$ using $P$ somehow. I think this will depend on the geometry chosen for the synaptic cleft. Read what is written in continuation}. 
+
+\section{Three-dimensional Geometry}
+In our first model, we assume that the synaptic cleft is shaped like a cube. In continuation, in order to make this more realistic, we could model it as a cylinder instead. Let $\rho_R$ represent the density of receptors on the membrane. We assume that $\rho_R$ is constant, $\rho_R = \SI{1000}{\micro\,\meter^{-2}}$, according to the values shown in the project description. Defining the synaptic cleft as a cube, means that the pre- and post-synaptic clefts are cubes as well. Thus, let $P(t,x) = \rho_R\cdot A\epsilon$, where $A$ is the area of the surface on the post-synaptic cleft and $\epsilon$ is the height of $\Omega(\epsilon)$. Thus, the equation is 
+
+\begin{equation}
+    \frac{\mathrm{d}c}{\mathrm{d}t} = \alpha_N\nabla^2c - k_1c\rho\epsilon A + k_{-1}\rho\epsilon Ac^{-1},
+\end{equation}
+where $A$ is the cross-sectional area of the post-synaptic neuron. \textcolor{red}{Får ikke dimensjonene til å stemme helt. Når $\epsilon \longrightarrow 0$ får vi kun en diffusjonsligning, så noe mangler åpenbart.}
+
+\textcolor{red}{Kan det tenkes at man har to ulike regimer: synaptic cleft $\Omega$ hvor $[R] = 0$, og post-synaptic cleft $\Omega_\epsilon$ hvor $[R] > 0$.
+Deretter krever man at $[N]$ er kontinuerlig i overgangen, og ender opp med ligningene våre. Til slutt lar man $\epsilon$ gå til null.}
+
+\textcolor{red}{Syns dette ↑ høres fornuftig ut. Da får man altså kun diffusjon av [N] utenfor $\Omega_{\epsilon}$, mens innenfor vil [N] påvirkes av både diffusjon og reaksjon med reseptorene. Men hva med [R] innenfor $\Omega_{\epsilon}$? Reseptorene står vel fast på cellemembranen, og vil derfor ikke diffusere? Men i slidesene er vel hele poenget med innføringen av den "pseudo-konsentrasjonen" å også modellere [R] med diffusjon?}
+
+\textcolor{red}{Jeg skjønner det som at $[R]$ er pseudo-konsentrasjonen.
+Vi modellerer opptaket av neurotransmittere av reseptorer som en kjemisk reaksjon mellom to konsentrasjoner (noe det ikke faktisk er), men da trenger vi en "konsentrasjon" av reseptorene. 
+Om $\epsilon \rightarrow 0 $ er noe som vi kun tenker oss skjer for at modellen skal ligne virkeligheten, eller om vi faktisk skal ta en grenseverdi i utledningeng, er jeg usikker på.
+I artiklene som nevnes under bryr de seg ikke så mye om dette, og bare kjører på med $[R]$.
+Jeg (Ulrik) tror de endelige modelleringsligningene er \eqref{eq:Modelling Eq 1}, \eqref{eq:Modelling Eq 2} og \eqref{eq:Modelling Eq 3}.}
+
+\textcolor{violet}{(Eirik) Enig, bortsett fra at [R] vel ikke diffuserer. Også \eqref{eq:4} i tillegg da, sammen med [R]=0 og [R-N]=0, for å modellere konsentrasjonene utenfor $\Omega_\epsilon$.}
+
+\textcolor{blue}{Noen flere tanker. Jeg fikk snakket med Xavier igår. Han sa at vi ikke skal trenge å definere geometrien for å utlede ligningene. Vi må anta konstant mengde reseptorer, ikke konstant konsentrasjon i $\Omega_\epsilon$.
+Jeg tenker at enten så holder det å si at $P_{\Omega_\epsilon}(x,t) \rightarrow_{\epsilon \rightarrow 0} P_\Gamma (x,t)$, eller så må vi utlede det tilsvarende slide 8-9 (Chemical reactions) med vår definerte pseudo-konsentrasjon (om det gir mening). Tenker å} \textcolor{green}{Blir ikke det bare det samme som "standard rate equation" da? Jeg skjønner heller ikke hvordan vi kan anta konstant mengde reseptorer i $\Omega_\epsilon$ og klare å relatere dette til konsentrasjonen uten å definere geometrien først. Skal vi da komme fram til noen ligninger for mengen stoff i stedet for konsentrasjon? I artikkelen her bruker de sylinderkoordinater til å lage en reaction diffusion eqn.}\verb$https://link.springer.com/content/pdf/10.1007/s10827-010-0289-5.pdf$
+
+If we discard terms of order $3$ or higher, and assume that the reaction between the receptors and neurotransmitters only take place when $z=0$, so that $\delta_z k_1 = k_1$ and $\delta_z k_{-1} = k_{-1}$ \textcolor{violet}{(dette er noe sloppy notasjon, bør kanksje fikses)}, we get
+\begin{align*}
+    &\left[ 1 - \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i+\frac{1}{2}} \delta_{r} + \frac{ \Delta t \alpha}{2 r_i (\Delta r)^2} r_{i-\frac{1}{2}} \delta_{-r} - \frac{\Delta t k_{1}}{2} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right)\right]\left[1 - \frac{\Delta t \alpha}{2 (\Delta z)^2} \delta_z^2 \right] [N]_{i,j}^{n+1} \\ 
+    &= \left[ 1 + \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i+\frac{1}{2}} \delta_r  - \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i-\frac{1}{2}} \delta_{-r} - \frac{\Delta t k_{1}}{2} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right) +  \Delta t k_{-1} \left( \frac{[R-N]_{i,j}^{n+1} + [R-N]_{i,j}^{n}}{2} \right)\right]\left[1+
+    \frac{\Delta t \alpha}{2 (\Delta z)^2} \delta_z^2 \right] [N]_{i,j}^{n}
+\end{align*}
+we can then split this scheme into a two-step process, by introducing an intermediate $[N]^*_{i,k}$. This gives
+\begin{equation*}
+    \left[ 1 - \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i+\frac{1}{2}} \delta_{r} + \frac{ \Delta t \alpha}{2 r_i (\Delta r)^2} r_{i-\frac{1}{2}} \delta_{-r} - \frac{\Delta t k_{1}}{2} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right)\right] [N]_{i,j}^*
+    = \left[1+
+    \frac{\Delta t \alpha}{2 (\Delta z)^2} \delta_z^2 \right] [N]_{i,j}^{n}
+\end{equation*}
+\begin{align*}
+    &\left[1 - \frac{\Delta t \alpha}{2 (\Delta z)^2} \delta_z^2 \right] [N]_{i,j}^{n+1} \\
+    &=\left[ 1 + \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i+\frac{1}{2}} \delta_r  - \frac{\Delta t \alpha}{2 r_i (\Delta r)^2} r_{i-\frac{1}{2}} \delta_{-r} - \frac{\Delta t k_{1}}{2} \left( \frac{[R]_{i,j}^{n+1} + [R]_{i,j}^{n}}{2} \right) +  \Delta t k_{-1} \left( \frac{[R-N]_{i,j}^{n+1} + [R-N]_{i,j}^{n}}{2} \right)\right] [N]_{i,j}^*
+\end{align*}
+
+\begin{equation}
+    \frac{dN*}{dx*} = \frac{N_0 dN}{x_0 dx}
+\end{equation}
+
+\begin{equation}
+    x* = x_0 x, \hspace{2em} N^*(x*) = N^*(\frac{x}{x_0}) = N_0N
+\end{equation}
+
+\begin{equation}
+    dx^* = x_0 dx,\hspace{2em} dN^* = N_0 dN
+\end{equation}
+
+\begin{equation}
+    \frac{d}{dx^*}\left(\frac{N_0 dN}{x_0 dx}\right) = \frac{d}{dx^*}\frac{dN*}{dx*} = \frac{d^2N*}{d(x^*)^2} 
+\end{equation}
+\end{comment}
+
+\printbibliography
+
+\end{document}
